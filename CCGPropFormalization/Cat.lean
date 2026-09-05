@@ -114,6 +114,13 @@ theorem eq_of_atom {Y X A B : Cat Atom} {a : Atom} (h : ReplaceHead Y X A B)
   | refl => exact ⟨rfl, hB⟩
   | step s Z _ => exact absurd hB (Cat.slash_ne_atom _ s Z a)
 
+/-- Inversion principle for `ReplaceHead` (avoids dependent elimination through `Cat.slash`). -/
+theorem inv {Y X A B : Cat Atom} (h : ReplaceHead Y X A B) :
+    (A = Y ∧ B = X) ∨ ∃ s Z A' B', ReplaceHead Y X A' B' ∧ A = A'.slash s Z ∧ B = B'.slash s Z := by
+  cases h with
+  | refl => exact Or.inl ⟨rfl, rfl⟩
+  | step s Z h => exact Or.inr ⟨s, Z, _, _, h, rfl, rfl⟩
+
 /-- If the left-hand side is atomic then no argument was peeled: `n = 0`. -/
 theorem atom_left {Y X A B : Cat Atom} {a : Atom} (h : ReplaceHead Y X A B)
     (hA : A = Cat.atom a) : Y = Cat.atom a ∧ B = X := by

@@ -261,6 +261,9 @@ CCGPropFormalization/
   ASP.lean                           -- 第二轮：ASP、AdjacentSwap、Rules.appAsp / appCompAsp / withASP
   Audit/ASP.lean                     -- 第二轮：audit 4，FA/BA(+Bⁿ)+ASP 的反例与正面引理
   Audit/AC.lean                      -- 第三轮：audit 5，Argument Capture
+  Continuation.lean                  -- 第四轮：Continues / GrammAcceptable
+  Audit/STR.lean                     -- 第四轮：audit 6，S-targeted TR，命题 1 与正面例子
+  Audit/Adjunct.lean                 -- 第四轮：audit 6，"John likes Mary madly"，命题 2 反例
   Examples.lean                      -- S/NP 例子与实例（含 ASP 的 decide 例子）
 ```
 
@@ -415,3 +418,63 @@ inductive AC : Cat Atom → Cat Atom → Cat Atom → Prop
 **失败结构**：AC 与 ASP 都只从函子一侧出发。AC 让函子提前"预订"右侧下一个词作为将来某个函子的左 argument；ASP 让函子重排自己的 valency。前缀以两个 argument 结尾时，没有函子可供出发，任何阶数的组合也无从谈起。要覆盖这一类，需要从 argument 一侧出发的规则 `A, B ⇒ T/((T\A)\B)`，而这就是 unrestricted TR，会重新引入第一轮的退化。
 
 **AC 自身的退化（受门控的）**：`Derives.ac_capture_all` 说明 `S/S` 之后接任意词串都"完整可推导"（`Examples.lean` 里 `S/S N NP N` 推出某个 `S/Z`）。这比 unrestricted TR 弱：它只在前缀已经是前向函子时发生，`X/Z` 中的 `Z` 精确记录了后文必须提供什么，两个原子永远无法组合。但它意味着"存在完整 derivation"在 `appAC` 下对首词为前向函子的句子同样是恒真式。
+
+
+---
+
+# 第四轮：S-Targeted Type Raising (STR) 与 Grammatical Acceptability
+
+```lean
+inductive STR (s : Atom) : Cat Atom → Cat Atom → Prop
+  | str (X) : STR s X (atom s ⫽ (atom s ⧵ X))        -- X ⇒ S/(S\X)
+
+def Rules.fullStrAC (s) : Rules Atom :=
+  ⟨fun C D => ASP C D ∨ STR s C D, fun A B C => Combine A B C ∨ AC A B C⟩
+  -- FA/BA + Bⁿ + ASP + AC + STR
+```
+
+文件：`Continuation.lean`、`Audit/STR.lean`、`Audit/Adjunct.lean`。
+
+**结论先行**
+
+| 命题 | 结果 | Lean |
+|---|---|---|
+| 1. `FA/BA + Bⁿ + ASP + AC + STR` ⇒ prefix reducibility | **成立，但平凡**：对任意词串无条件成立，假设未用；"存在完整 derivation" 也恒真 | `prefixReducible_fullStrAC`, `exists_full_derivation_fullStrAC` |
+| 2. Grammatical acceptability：每个前缀都有一个能被**真实后缀**discharge 到 `S` 的范畴 | **不成立** | `lexAdj_not_grammAcceptable` |
+| 反例 | "John likes Mary madly" `[NP, (S\NP)/NP, NP, (S\NP)\(S\NP)]`，`n = 4`，前缀 `John likes` | `Audit/Adjunct.lean` |
+| 题目中的例子 `NP NP (S\NP)\NP` | 可接受：`NP ⇒ S/(S\NP)`，AC 捕获第二个 `NP` 得 `S/((S\NP)\NP)`，FA 得 `S` | `lexSOV_grammAcceptable` |
+| "what John likes" | 可接受 | `lexWhat_grammAcceptable` |
+
+## A. 命题 1 为什么平凡
+
+STR 把首词变成前向函子 `S/(S\w₁)`，第三轮的 `Derives.ac_capture_all` 随后把每个后续词都捕获进去，前缀 `w₁…wᵢ` 恒可规约为 `S/(((S\w₁)\w₂)⋯\wᵢ)`。这正是第一轮 unrestricted TR 的退化机制：`A ⇒ T/(T\A)`、`B ⇒ (T\A)/((T\A)\B)`、再 `B¹`，只不过 `T` 被钉死为 `S`，第二步由 AC 在函子一侧完成。`Examples.lean` 中 `NP NP N NP` 也是 prefix reducible。
+
+## B. Grammatical acceptability 的形式化（`Continuation.lean`）
+
+```lean
+inductive Continues (R) (lex) (i : ℕ) (P : Cat Atom) : ℕ → Cat Atom → Prop
+  | refl  : Continues R lex i P i P
+  | unary : Continues R lex i P j C → R.unary C D → Continues R lex i P j D
+  | bin   : Continues R lex i P j A → Derives R lex j k B → R.bin A B C → Continues R lex i P k C
+
+def GrammAcceptable (R) (lex) (C) : Prop :=
+  ∀ i, 0 < i → i < n → ∃ P, Derives R lex 0 i P ∧ Continues R lex i P n C
+```
+
+`Continues R lex i P j C`：`[0,i)` 上的成分 `P` 只用 `[i,j)` 的词扩展成 `[0,j)` 上的 `C`。因为从 0 开始的成分都在树的左脊上，这恰好等价于"`P` 是某个推出 `C` 的 derivation 的成分"，后缀的括号方式完全自由（`bin` 的右侧是任意 `Derives`）。它介于 `PrefixReducible`（任意范畴）与 `StrongPrefixReducible`（一步 discharge）之间：`GrammAcceptable.of_strong`、`GrammAcceptable.prefixReducible`。`Derives.continues_first` 说明前缀 1 总是可接受的（首词是任何 derivation 的成分），所以反例的最小前缀长度是 2。
+
+## C. 反例的证明结构（`Audit/Adjunct.lean`）
+
+"John likes Mary madly" 用 FA/BA 即可推出 `S`（`lexAdj_full`）。要证明前缀 `John likes` 的任何范畴都不能被 `Mary madly` discharge 到 `S`：
+
+1. **一元闭包**。`Raised P C`：在满足谓词 `P` 的范畴上迭代 STR。`rtg_raised` 证明只要 `P` 对 ASP 封闭，`ASP ∨ STR` 闭包就落在 `Raised P` 内。四个词的 `P` 分别是 `{NP}`、`{(S\NP)/NP, (S/NP)\NP}`（ASP 交换两个 slot）、`{NP}`、`{(S\NP)\(S\NP), (S\(S\NP))\NP}`（`madly` 也有两个 slot，ASP 可交换）。两 slot 范畴的 ASP 类由 `ASP.eq_or_swap_of_two` 精确给出。
+2. **各区间的范畴**。`derives02`：`John likes` 的每个范畴都是 `S/Z`，且 `Z` 满足 `NotBad`；`derives23`、`derives34`：单词的闭包；`derives24`：`Mary madly` 只能是 `S\(S\NP)`（BA 或 crossed `B¹`）或某个 `S/Z`。
+3. **不变量**。`NotBad Z` 记录 `Z` 永远不会是 `S`、`(S\NP)\(S\NP)`、`(S\(S\NP))\NP`、`S\(S\NP)`、`S\NP` 或任何 `S/W`，即后缀能提供的所有东西。`Inv j C` 规定状态 `(2, S/Z)`、`(3, S)` 或 `(3, S/Z)`、`(4, S/Z)`，其中 `Z` 都 `NotBad`。`inv_unary`、`inv_bin` 证明每条一元规则（ASP、STR）和每条二元规则（FA、BA、任意阶前后向组合、AC）都保持它；`fcomp_absurd`、`bcomp_absurd` 处理广义组合的 `ReplaceHead` 反演。
+4. `Inv 4 S` 为假：`S` 不是 `S/Z`。
+
+失败结构是经典的右向附加语：`madly` 需要一个完整的 `S\NP` 在它左边，但增量推导在 `likes` 处必须先决定 `John likes` 的范畴；所有可选范畴 `S/Z` 都把"下一个是 `NP`"或"下一个是某个以 `S` 为头的函子"编码进 `Z`，没有一个能在吃掉 `Mary` 之后仍把 `S\NP` 暴露给 `madly`。AC 在这里能做的是 `S/(S\NP) NP ⇒ S/((S\NP)\NP)`，但 `(S\NP)\NP` 不是后缀能给出的范畴。相比之下 `NP NP (S\NP)\NP` 可接受，因为后缀恰好就是 AC 预订的那个函子。
+
+## D. 与前几轮的关系
+
+- 命题 1 的退化和第一轮同源；`STR + AC` 是 unrestricted TR 的"`T := S`"实例，仍然让"存在完整 derivation"变成恒真式。
+- `GrammAcceptable` 是把"residual continuation 必须与真实后缀匹配"精确化后的命题，它才是有内容的问题；在本系统里它对一些自然句子成立（`lexSOV`、`lexWhat`），对右向附加语不成立。要覆盖后者需要新的机制（例如 Pareschi–Steedman 的 revealing，或允许附加语类型 `(S\NP)\(S\NP)` 参与某种 AC），这超出了本轮规则集。

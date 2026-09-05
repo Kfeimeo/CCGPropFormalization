@@ -1,6 +1,7 @@
 import CCGPropFormalization.Cat
 import CCGPropFormalization.Rules
 import CCGPropFormalization.Derivation
+import CCGPropFormalization.Continuation
 import CCGPropFormalization.Positive
 import CCGPropFormalization.Audit.NoTR
 import CCGPropFormalization.Audit.AtomicTR
@@ -9,4 +10,6 @@ import CCGPropFormalization.Spine
 import CCGPropFormalization.ASP
 import CCGPropFormalization.Audit.ASP
 import CCGPropFormalization.Audit.AC
+import CCGPropFormalization.Audit.STR
+import CCGPropFormalization.Audit.Adjunct
 import CCGPropFormalization.Examples

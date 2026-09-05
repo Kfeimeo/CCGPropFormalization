@@ -3,6 +3,7 @@ import CCGPropFormalization.Audit.AtomicTR
 import CCGPropFormalization.Audit.Strong
 import CCGPropFormalization.Audit.ASP
 import CCGPropFormalization.Audit.AC
+import CCGPropFormalization.Audit.Adjunct
 
 /-!
 # Small `S/NP` examples
@@ -161,5 +162,21 @@ example : LeftSpine Rules.appAspAC (lexWhat At.s At.np) 0 3 S := lexWhat_leftSpi
 /-- The gated degeneracy of AC: `S/S` followed by junk is "fully derivable". -/
 example : ∃ C, Derives Rules.appAC (![S ⫽ S, N, NP, N] : Fin 4 → Cat At) 0 4 C :=
   prefixReducible_of_first_fwd (Rules.le_refl _) (by omega) (X := S) (Y := S) rfl 4 (by omega) le_rfl
+
+/-! ## S-targeted type raising (STR) and grammatical acceptability -/
+
+/-- Audit 6: with STR + AC everything is prefix reducible, even word salad. -/
+example : PrefixReducible (Rules.fullStrAC At.s) (![NP, NP, N, NP] : Fin 4 → Cat At) :=
+  prefixReducible_fullStrAC At.s _
+/-- …but `NP NP (S\NP)\NP` and `what John likes` are also *grammatically acceptable*. -/
+example : GrammAcceptable (Rules.fullStrAC At.s) (lexSOV At.s At.np) S :=
+  lexSOV_grammAcceptable At.s At.np
+example : GrammAcceptable (Rules.fullStrAC At.s) (lexWhat At.s At.np) S :=
+  lexWhat_grammAcceptable At.s At.np
+/-- …while `John likes Mary madly` derives `S` but is not: no category of `John likes` can be
+discharged by `Mary madly`. -/
+example : Derives (Rules.fullStrAC At.s) (lexAdj At.s At.np) 0 4 S ∧
+    ¬ GrammAcceptable (Rules.fullStrAC At.s) (lexAdj At.s At.np) S :=
+  lexAdj_not_grammAcceptable (by decide)
 
 end CCG.Examples
