@@ -2,6 +2,7 @@ import CCGPropFormalization.Audit.NoTR
 import CCGPropFormalization.Audit.AtomicTR
 import CCGPropFormalization.Audit.Strong
 import CCGPropFormalization.Audit.ASP
+import CCGPropFormalization.Audit.AC
 
 /-!
 # Small `S/NP` examples
@@ -147,5 +148,18 @@ example : (∃ C, Derives Rules.appAsp (lexSOV At.s At.np) 0 3 C) ∧
 example : (∃ C, Derives Rules.appCompAsp (lexAdv At.s At.np) 0 3 C) ∧
     ¬ PrefixReducible Rules.appCompAsp (lexAdv At.s At.np) :=
   not_prefixReducible_appCompAsp' At.s At.np (by decide)
+
+/-! ## Argument capture (AC) -/
+
+/-- Audit 5 on concrete atoms: `NP NP (S\NP)\NP` is still a counterexample with AC. -/
+example : (∃ C, Derives Rules.appCompAspAC (lexSOV At.s At.np) 0 3 C) ∧
+    ¬ PrefixReducible Rules.appCompAspAC (lexSOV At.s At.np) :=
+  not_prefixReducible_appCompAspAC At.s At.np
+/-- …while `S/S NP S\NP` and `what John likes` become incremental. -/
+example : PrefixReducible Rules.appAC (lexAdv At.s At.np) := lexAdv_prefixReducible_appAC At.s At.np
+example : LeftSpine Rules.appAspAC (lexWhat At.s At.np) 0 3 S := lexWhat_leftSpine_appAspAC At.s At.np
+/-- The gated degeneracy of AC: `S/S` followed by junk is "fully derivable". -/
+example : ∃ C, Derives Rules.appAC (![S ⫽ S, N, NP, N] : Fin 4 → Cat At) 0 4 C :=
+  prefixReducible_of_first_fwd (Rules.le_refl _) (by omega) (X := S) (Y := S) rfl 4 (by omega) le_rfl
 
 end CCG.Examples

@@ -260,6 +260,7 @@ CCGPropFormalization/
   Spine.lean                         -- 第二轮：flattenSpine / rebuildSpine / ArgSlot
   ASP.lean                           -- 第二轮：ASP、AdjacentSwap、Rules.appAsp / appCompAsp / withASP
   Audit/ASP.lean                     -- 第二轮：audit 4，FA/BA(+Bⁿ)+ASP 的反例与正面引理
+  Audit/AC.lean                      -- 第三轮：audit 5，Argument Capture
   Examples.lean                      -- S/NP 例子与实例（含 ASP 的 decide 例子）
 ```
 
@@ -386,3 +387,31 @@ John : NP    Mary : NP    loves : (S\NP)\NP        —— lexSOV
 
 - `Derives.asp_reassoc`：对任意 `R ⊇ appAsp`，若 `[i,k) ⇒ A`、`[k,j) ⇒ (H\A)/B`、`[j,l) ⇒ B`，则 `[i,j) ⇒ H/B` 且 `[i,l) ⇒ H`。这是 ASP 的核心用途：一个 functor 先吃哪个 argument 可以对调。
 - `lexSVO_prefix₂ / lexSVO_leftSpine / lexSVO_prefixReducible`：`John likes Mary` 在 `FA/BA + ASP` 下 `John likes ⇒ S/NP`，整句 left-branching 推出 `S`，prefix reducible。
+
+
+---
+
+# 第三轮：Argument Capture (AC)
+
+```lean
+inductive AC : Cat Atom → Cat Atom → Cat Atom → Prop
+  | ac (X Y A) : AC (X ⫽ Y) A (X ⫽ (Y ⧵ A))        -- X/Y  A ⇒ X/(Y\A)
+```
+
+规则集：`Rules.appAC = FA/BA + AC`，`Rules.appAspAC = FA/BA + ASP + AC`，`Rules.appCompAspAC = FA/BA + Bⁿ + ASP + AC`（TR 关闭）。文件 `Audit/AC.lean`。
+
+**结论**
+
+| 命题 | 结果 | Lean |
+|---|---|---|
+| `FA/BA + ASP + AC` ⇒ prefix reducibility | **不成立** | `not_prefixReducible_appAspAC` |
+| `FA/BA + Bⁿ + ASP + AC` ⇒ prefix reducibility | **不成立**，同一反例 | `not_prefixReducible_appCompAspAC` |
+| 反例 | 仍是 `NP NP (S\NP)\NP`：前缀 `NP NP` 两个都是原子，AC 要求左边是前向函子，Bⁿ 要求两边有函子，ASP 固定原子 | `lexSOV_prefix_irreducible_ac`, `AC.not_atom_left` |
+| AC 是什么 | 目标固定为 `Y` 的一次 TR 加 `B¹`，因此不退化：两个原子仍不能组合 | `AC.eq_tr_comp` |
+| AC 买到了什么 | 前缀一旦规约为前向函子 `X/Y`，之后**任何**延续都能被捕获为 `X/Z` | `Derives.ac_capture_all` |
+| 推论 | 第一个词是前向函子（或在 ASP 下只要含有一个前向 slot）的句子必定 prefix reducible，无论后面是什么 | `prefixReducible_of_first_fwd`, `prefixReducible_of_first_has_fwd_slot`, `ASP.exists_fwd_outer` |
+| 被修好的例子 | `S/S NP S\NP` 在 `FA/BA + AC` 下 prefix reducible；"what John likes" 在 `FA/BA + ASP + AC` 下有 left-branching 推导得到 `S`——第一轮 audit 2 的强反例在这个系统里消失 | `lexAdv_prefixReducible_appAC`, `lexWhat_leftSpine_appAspAC` |
+
+**失败结构**：AC 与 ASP 都只从函子一侧出发。AC 让函子提前"预订"右侧下一个词作为将来某个函子的左 argument；ASP 让函子重排自己的 valency。前缀以两个 argument 结尾时，没有函子可供出发，任何阶数的组合也无从谈起。要覆盖这一类，需要从 argument 一侧出发的规则 `A, B ⇒ T/((T\A)\B)`，而这就是 unrestricted TR，会重新引入第一轮的退化。
+
+**AC 自身的退化（受门控的）**：`Derives.ac_capture_all` 说明 `S/S` 之后接任意词串都"完整可推导"（`Examples.lean` 里 `S/S N NP N` 推出某个 `S/Z`）。这比 unrestricted TR 弱：它只在前缀已经是前向函子时发生，`X/Z` 中的 `Z` 精确记录了后文必须提供什么，两个原子永远无法组合。但它意味着"存在完整 derivation"在 `appAC` 下对首词为前向函子的句子同样是恒真式。
