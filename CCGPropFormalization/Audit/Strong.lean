@@ -50,7 +50,7 @@ def lexWhat : Fin 3 → Cat Atom := ![S ⫽ (S ⫽ NP), NP, (S ⧵ NP) ⫽ NP]
 /-- The right-branching derivation `what (John likes) ⇒ S`. -/
 theorem lexWhat_full : Derives Rules.full (lexWhat s np) 0 3 S :=
   Derives.bin (Derives.lex 0)
-    (Derives.bin (Derives.tr (Derives.lex 1) (TypeRaise.fwd S NP)) (Derives.lex 2)
+    (Derives.bin (Derives.unary (Derives.lex 1) (TypeRaise.fwd S NP)) (Derives.lex 2)
       (Combine.fcomp₁ S (S ⧵ NP) NP))
     (Combine.fa S (S ⫽ NP))
 

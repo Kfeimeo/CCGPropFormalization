@@ -36,7 +36,7 @@ theorem Rules.atomicTR_le_full : (Rules.atomicTR : Rules Atom) ≤ Rules.full :=
 
 /-- Reflexive–transitive closure of atomic-target type raising. -/
 abbrev TRAtom : Cat Atom → Cat Atom → Prop :=
-  Relation.ReflTransGen (Rules.atomicTR (Atom := Atom)).tr
+  Relation.ReflTransGen (Rules.atomicTR (Atom := Atom)).unary
 
 /-- The lexicon `[NP, NP, (S\NP)\NP]`. -/
 def lexAtomic (s np : Atom) : Fin 3 → Cat Atom :=

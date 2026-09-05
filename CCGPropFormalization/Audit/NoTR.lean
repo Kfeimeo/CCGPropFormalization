@@ -74,7 +74,7 @@ dictated by the third word. -/
 theorem lexNoTR_prefix_reducible_with_TR (X Y W : Atom) :
     Derives Rules.full (lexNoTR X Y W) 0 2 (atom X ⫽ (atom Y ⧵ atom W)) :=
   Derives.bin (Derives.lex 0)
-    (Derives.tr (Derives.lex 1) (TypeRaise.fwd (atom Y) (atom W)))
+    (Derives.unary (Derives.lex 1) (TypeRaise.fwd (atom Y) (atom W)))
     (Combine.fcomp₁ (atom X) (atom Y) (atom Y ⧵ atom W))
 
 end CCG

@@ -5,4 +5,7 @@ import CCGPropFormalization.Positive
 import CCGPropFormalization.Audit.NoTR
 import CCGPropFormalization.Audit.AtomicTR
 import CCGPropFormalization.Audit.Strong
+import CCGPropFormalization.Spine
+import CCGPropFormalization.ASP
+import CCGPropFormalization.Audit.ASP
 import CCGPropFormalization.Examples

@@ -26,7 +26,7 @@ variable {Atom : Type} {n : ℕ}
 each, using plain `B¹` only.  The type-raising target is chosen to be `A` itself
 (any category would do). -/
 theorem Rules.minimal_combine_any (A B : Cat Atom) :
-    ∃ A' B' C, Rules.minimal.tr A A' ∧ Rules.minimal.tr B B' ∧ Rules.minimal.bin A' B' C :=
+    ∃ A' B' C, Rules.minimal.unary A A' ∧ Rules.minimal.unary B B' ∧ Rules.minimal.bin A' B' C :=
   ⟨A ⫽ (A ⧵ A), (A ⧵ A) ⫽ ((A ⧵ A) ⧵ B), A ⫽ ((A ⧵ A) ⧵ B),
     ⟨A, rfl⟩, ⟨A ⧵ A, rfl⟩, ⟨A, A ⧵ A, (A ⧵ A) ⧵ B, rfl, rfl, rfl⟩⟩
 
@@ -44,8 +44,8 @@ theorem LeftSpine.exists_minimal (lex : Fin n → Cat Atom) :
     rcases Nat.lt_or_ge i j with h | h
     · obtain ⟨C, hC⟩ := LeftSpine.exists_minimal lex j i h (by omega)
       obtain ⟨A', B', D, hA, hB, hD⟩ := Rules.minimal_combine_any C (lex ⟨j, hjn⟩)
-      exact ⟨D, LeftSpine.bin (LeftSpine.tr hC hA)
-        (LeftSpine.tr (LeftSpine.lex ⟨j, hjn⟩) hB) hD⟩
+      exact ⟨D, LeftSpine.bin (LeftSpine.unary hC hA)
+        (LeftSpine.unary (LeftSpine.lex ⟨j, hjn⟩) hB) hD⟩
     · obtain rfl : i = j := by omega
       exact ⟨lex ⟨i, hjn⟩, LeftSpine.lex ⟨i, hjn⟩⟩
 

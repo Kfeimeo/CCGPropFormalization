@@ -1,6 +1,7 @@
 import CCGPropFormalization.Audit.NoTR
 import CCGPropFormalization.Audit.AtomicTR
 import CCGPropFormalization.Audit.Strong
+import CCGPropFormalization.Audit.ASP
 
 /-!
 # Small `S/NP` examples
@@ -42,13 +43,13 @@ example : Derives Rules.full johnLikesMary 0 3 S :=
 
 /-- TR + `B¹`: `(John likes) ⇒ S/NP`. -/
 example : Derives Rules.full johnLikesMary 0 2 (S ⫽ NP) :=
-  Derives.bin (Derives.tr (Derives.lex 0) (TypeRaise.fwd S NP)) (Derives.lex 1)
+  Derives.bin (Derives.unary (Derives.lex 0) (TypeRaise.fwd S NP)) (Derives.lex 1)
     (Combine.fcomp₁ S (S ⧵ NP) NP)
 
 /-- Left-branching derivation `((John likes) Mary) ⇒ S`. -/
 example : LeftSpine Rules.full johnLikesMary 0 3 S :=
   LeftSpine.bin
-    (LeftSpine.bin (LeftSpine.tr (LeftSpine.lex 0) (TypeRaise.fwd S NP)) (LeftSpine.lex 1)
+    (LeftSpine.bin (LeftSpine.unary (LeftSpine.lex 0) (TypeRaise.fwd S NP)) (LeftSpine.lex 1)
       (Combine.fcomp₁ S (S ⧵ NP) NP))
     (LeftSpine.lex 2) (Combine.fa S NP)
 
@@ -91,8 +92,8 @@ example : ∃ C, Derives Rules.full (![NP, NP, NP] : Fin 3 → Cat At) 0 3 C :=
 /-- The generic two-word combination used by the positive proof, on `NP NP`:
 `NP ⇒ NP/(NP\NP)`, `NP ⇒ (NP\NP)/((NP\NP)\NP)`, then `B¹`. -/
 example : Derives Rules.full (![NP, NP, NP] : Fin 3 → Cat At) 0 2 (NP ⫽ ((NP ⧵ NP) ⧵ NP)) :=
-  Derives.bin (Derives.tr (Derives.lex 0) (TypeRaise.fwd NP NP))
-    (Derives.tr (Derives.lex 1) (TypeRaise.fwd (NP ⧵ NP) NP))
+  Derives.bin (Derives.unary (Derives.lex 0) (TypeRaise.fwd NP NP))
+    (Derives.unary (Derives.lex 1) (TypeRaise.fwd (NP ⧵ NP) NP))
     (Combine.fcomp₁ NP (NP ⧵ NP) ((NP ⧵ NP) ⧵ NP))
 
 /-- Audit 1 on concrete atoms: `S/NP  N  NP\N` (no type raising). -/
@@ -112,5 +113,39 @@ example : Derives Rules.full (lexWhat At.s At.np) 0 3 S ∧
 
 example : ¬ StrongPrefixReducible Rules.full (lexWhat At.s At.np) S :=
   lexWhat_not_strongPrefixReducible At.s At.np
+
+/-! ## Argument-spine permutation (ASP) -/
+
+/-- Flattening follows the result spine only. -/
+example : flattenSpine (((S ⧵ NP) ⫽ NP) ⫽ N) = (S, [⟨.bwd, NP⟩, ⟨.fwd, NP⟩, ⟨.fwd, N⟩]) := rfl
+/-- …and never enters an argument. -/
+example : flattenSpine (S ⧵ (NP ⫽ N)) = (S, [⟨.bwd, NP ⫽ N⟩]) := rfl
+example : rebuildSpine S [⟨.bwd, NP⟩, ⟨.fwd, NP⟩] = (S ⧵ NP) ⫽ NP := rfl
+
+/-- `(S\NP)/NP ⇒ (S/NP)\NP` (decided by computation). -/
+example : ASP ((S ⧵ NP) ⫽ NP) ((S ⫽ NP) ⧵ NP) := by decide
+/-- `((S\NP)/NP)/N ⇒ ((S/NP)\NP)/N`. -/
+example : ASP (((S ⧵ NP) ⫽ NP) ⫽ N) (((S ⫽ NP) ⧵ NP) ⫽ N) := by decide
+/-- `(S/NP)/N ⇒ (S/N)/NP`. -/
+example : ASP ((S ⫽ NP) ⫽ N) ((S ⫽ N) ⫽ NP) := by decide
+/-- Slots move as a whole: swapping only the slashes is **not** ASP. -/
+example : ¬ ASP ((S ⧵ NP) ⫽ N) ((S ⫽ NP) ⧵ N) := by decide
+/-- Arguments are opaque: nothing inside `NP/N` can be touched. -/
+example : ¬ ASP (S ⧵ (NP ⫽ N)) (S ⧵ (N ⫽ NP)) := by decide
+example : ¬ ASP (S ⧵ (NP ⫽ N)) ((S ⫽ N) ⧵ NP) := by decide
+/-- The head is invariant. -/
+example : ¬ ASP (S ⫽ NP) (N ⫽ NP) := by decide
+
+/-- `John likes Mary` left to right with FA/BA + ASP only. -/
+example : LeftSpine Rules.appAsp (lexSVO At.s At.np) 0 3 S := lexSVO_leftSpine At.s At.np
+example : PrefixReducible Rules.appAsp (lexSVO At.s At.np) := lexSVO_prefixReducible At.s At.np
+
+/-- Audit 4 on concrete atoms. -/
+example : (∃ C, Derives Rules.appAsp (lexSOV At.s At.np) 0 3 C) ∧
+    ¬ PrefixReducible Rules.appAsp (lexSOV At.s At.np) :=
+  not_prefixReducible_appAsp At.s At.np
+example : (∃ C, Derives Rules.appCompAsp (lexAdv At.s At.np) 0 3 C) ∧
+    ¬ PrefixReducible Rules.appCompAsp (lexAdv At.s At.np) :=
+  not_prefixReducible_appCompAsp' At.s At.np (by decide)
 
 end CCG.Examples

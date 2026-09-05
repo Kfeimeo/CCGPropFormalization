@@ -257,7 +257,10 @@ CCGPropFormalization/
   Audit/NoTR.lean                    -- audit 1：无 TR 反例
   Audit/AtomicTR.lean                -- audit 3：原子目标 TR 反例
   Audit/Strong.lean                  -- audit 2："what John likes"，强版本反例
-  Examples.lean                      -- S/NP 例子与实例
+  Spine.lean                         -- 第二轮：flattenSpine / rebuildSpine / ArgSlot
+  ASP.lean                           -- 第二轮：ASP、AdjacentSwap、Rules.appAsp / appCompAsp / withASP
+  Audit/ASP.lean                     -- 第二轮：audit 4，FA/BA(+Bⁿ)+ASP 的反例与正面引理
+  Examples.lean                      -- S/NP 例子与实例（含 ASP 的 decide 例子）
 ```
 
 ## 7. 设计决策说明
@@ -267,3 +270,119 @@ CCGPropFormalization/
 - **backward composition 与 crossed 实例**：正面证明不需要它们（只用 `Rules.minimal`），按题目要求没有"无理由加入"到正面结果里；它们放进 `Rules.full` 的唯一理由是让反例对更大的规则集也成立（`Audit/Strong.lean` 的穷举显式处理了 `bcomp` 与任意 slash 的 spine）。由 `mono`，所有反例对 `Rules.full` 的任何子集都成立。
 - **反例不依赖原子互异**（除 audit 1 需要 `W ≠ Y`），全部以任意 `Atom` 为参数陈述，再在 `Examples.lean` 中实例化。
 - **不含 `sorry`**；`#print axioms` 只出现 `propext`、`Quot.sound`（与反例中的 `Classical.choice`）。
+- 第二轮起 `Rules` 的一元规则字段改名为 `unary`（`Rules.full.unary = TypeRaise`，`Rules.appAsp.unary = ASP`），`Derives.unary` 相应改名；语义不变。
+
+
+---
+
+# 第二轮：Argument-Spine Permutation (ASP)
+
+新增文件 `Spine.lean`、`ASP.lean`、`Audit/ASP.lean`。本轮只做语法层；ASP 是显式的结构变换 `C ⇒_ASP C'`，在 `Derives` 中作为一条一元规则出现，**不是** category 相等。
+
+**结论先行**
+
+| 命题 | 结果 | Lean |
+|---|---|---|
+| `FA/BA + ASP` ⇒ prefix reducibility | **不成立** | `not_prefixReducible_appAsp` |
+| `FA/BA + generalized composition + ASP` ⇒ prefix reducibility | **不成立**，同一个反例 | `not_prefixReducible_appCompAsp` |
+| 最小反例 | `NP NP (S\NP)\NP`（n = 3，无附加条件）；另有 `S/S NP S\NP`（需 `NP ≠ S`） | `lexSOV_*`, `lexAdv_*` |
+| 再加原子目标 TR 也不够 | **不成立** | `not_prefixReducible_atomicTRAsp` |
+| ASP 是否退化为"任意两个 category 可组合" | **否**：两个原子永远不能组合 | `not_asp_combine_any`, `Combine.not_atom_atom` |
+| ASP 买到了什么 | `A (F B) ⇒ (A F) B` 的重结合；`John likes Mary` 可从左到右推导 | `Derives.asp_reassoc`, `lexSVO_leftSpine` |
+| ASP 带来的新退化 | 同一 functor 的所有 valency 顺序等价：`(X/A)/B` 也能接受 `F A B` 语序 | `lexVAB_full_appAsp` vs `lexVAB_prefix_irreducible_app` |
+
+## A. Argument spine（`Spine.lean`）
+
+```lean
+abbrev Dir := Slash
+structure ArgSlot (Atom) where (dir : Dir) (arg : Cat Atom)
+
+def flattenSpine : Cat Atom → Cat Atom × List (ArgSlot Atom)
+  | atom a  => (atom a, [])
+  | X ⫽ A   => ((flattenSpine X).1, (flattenSpine X).2 ++ [⟨fwd, A⟩])
+  | X ⧵ A   => ((flattenSpine X).1, (flattenSpine X).2 ++ [⟨bwd, A⟩])
+
+def rebuildSpine (X) : List (ArgSlot Atom) → Cat Atom
+  | []      => X
+  | s :: sl => rebuildSpine (X.slash s.dir s.arg) sl
+```
+
+只沿 result/head spine 展开，slot 按由内到外排列；argument 内部**绝不**递归：
+
+- `((X\A)/B)/C ↦ (X, [(bwd,A),(fwd,B),(fwd,C)])`
+- `X\(A/B) ↦ (X, [(bwd, A/B)])`
+
+已证：`rebuild_flatten`（`rebuildSpine (flattenSpine C).1 (flattenSpine C).2 = C`）、`flatten_rebuild`（converse/normalization：`flattenSpine (rebuildSpine X sl) = (head X, slots X ++ sl)`）、`flattenSpine_head_isAtom`（head 总是原子）、`flattenSpine_injective`、`flattenSpine_eq_iff`。并与第一轮的 `Cat.spine` / `ReplaceHead` 打通：`rebuildSpine_eq_spine`、`ReplaceHead.iff_rebuild`（广义组合 = 换 head、保留全部 slot）。
+
+## B. 十个问题的回答
+
+**1. ASP 的正式定义是什么？**
+
+```lean
+def ASP (C C' : Cat Atom) : Prop :=
+  (flattenSpine C).1 = (flattenSpine C').1 ∧ List.Perm (flattenSpine C).2 (flattenSpine C').2
+```
+
+`ASP.iff_exists` 证明它与题目给出的 `∃ X args args', flattenSpine C = (X, args) ∧ flattenSpine C' = (X, args') ∧ args ~ args'` 等价。`ASP.refl / symm / trans / equivalence`：等价关系。不变量：`head_eq`、`perm`、`multiset_eq`（slot 的 multiset 不变）、`spineLength_eq`（valency 不变）、`slot_mem`（`C'` 的每个 slot 原封不动来自 `C`）。有 `DecidableRel` 实例，具体例子可用 `decide` 判定。
+
+**2. 为什么它等价于 argument-spine permutation？**
+
+`flattenSpine` 是 `Cat` 到 `Atom × List ArgSlot` 的双射（`rebuild_flatten` + `flatten_rebuild_atom`），所以"同 head、slot 列表互为置换"就是"外层 argument spine 任意置换"。更进一步，`perm_iff_rtg_adjacentSwap` 证明任意 `List.Perm` 是有限次相邻交换 `AdjacentSwap` 的复合，于是 `ASP.iff_rtg_step`：
+
+```lean
+ASP C C' ↔ Relation.ReflTransGen ASPStep C C'
+```
+
+其中 `ASPStep` 只交换两个**相邻** slot。ASP 不是无穷多条 primitive rule，而是一条局部交换规则的自反传递闭包。
+
+**3. 为什么 `/A` 与 `\A` 必须作为完整 slot 一起移动？**
+
+方向说明该 argument 出现在哪一侧，argument 说明它是什么；两者拆开就会改变一个 functor 的选择关系。形式上 slot 类型是 `ArgSlot = (dir, arg)`，置换在这个类型的列表上进行。`ASP.not_dir_swap` 证明"只交换 slash、不交换 argument"的 `(X\A)/B ↦ (X/A)\B` 在 `A ≠ B` 时不是 ASP；`Examples.lean` 里 `¬ ASP ((S⧵NP)⫽N) ((S⫽NP)⧵N)` 由 `decide` 判定。
+
+**4. `/`–`/`、`\`–`\`、`/`–`\` 是否都可交换？**
+
+都可以：`ASP.fwd_fwd`、`ASP.bwd_bwd`、`ASP.bwd_fwd` 都是同一个 `ASP.swap_outer X d₁ A d₂ B` 的实例；配合 `ASP.slash_congr` 得到内层交换如 `((X\A)/B)/C ⇔ ((X/B)\A)/C`（`ASP.bwd_fwd_fwd`）。ASP 对 slash 方向是盲的。
+
+**5. `FA/BA + ASP` 是否推出 prefix reducibility？** 否。
+
+**6. 最小反例是什么？**
+
+`n = 3`（`n ≤ 2` 时真前缀都是单词）：
+
+```
+John : NP    Mary : NP    loves : (S\NP)\NP        —— lexSOV
+```
+
+整句两次 BA 推出 `S`（`lexSOV_full`）；前缀 `NP NP` 什么都推不出（`lexSOV_prefix_irreducible`）：ASP 固定原子（`ASP.eq_of_atom`），而两个原子不满足任何二元规则（`Combine.not_atom_atom`）。不需要任何原子互异的条件。第二个自然反例是英语句 `maybe John left = S/S NP S\NP`（`lexAdv`）：`S/S` 只有一个 slot，ASP 对它是恒等（`ASP.eq_of_atom_fwd`），前缀 `S/S NP` 在 `NP ≠ S` 时卡死。
+
+**7. `FA/BA + generalized composition + ASP` 是否推出？** 否。两个反例都直接在 `Rules.appCompAsp`（FA/BA + 任意阶前后向广义组合 + ASP）上证明，再由 `Derives.mono` 传给 `Rules.appAsp`。失败结构：卡住的两个词都是**argument**（`NP NP`），或者是"functor + 它不选择的 argument"（`S/S NP`）。ASP 只能重排**一个 functor 自己的 valency**，不能给 argument 制造 valency，也不能改变它与尚未出现的 functor 之间的 constituent–constituent dependency。它不属于 embedded functional argument 或 crossed dependency 的问题：反例里所有 argument 都是原子、依赖全部投射。
+
+**8. 是否还需要其他 structural rule？**
+
+需要一条能把 argument 变成 functor 的规则，也就是 TR。而且目标必须允许复合 category：`not_prefixReducible_atomicTRAsp` 证明在 `FA/BA + Bⁿ + 原子目标 TR + ASP`（`Rules.atomicTRAsp`）下 `NP NP (S\NP)\NP` 仍然卡死——原子目标 TR 产出的都是单 slot functor，ASP 对它们是恒等（`TRAtom.spineLength_le_one`, `Rules.atomicTRAsp_unary_rtg`）。一旦允许复合目标，就回到第一轮的平凡化。ASP 与 TR 处理的是两个正交的问题：ASP 处理"同一 functor 的 argument 顺序"，TR 处理"argument 与 functor 的角色互换"。
+
+**9. 与 unrestricted TR 相比，ASP 是否避免了退化？**
+
+是。`Combine.any` 在 TR 下让任意两个 category 可组合；`not_asp_combine_any` 证明 ASP 下不存在这种通用组合（两个原子永远不能组合）。ASP 保持 head、valency 与 slot multiset，一个 category 的 ASP 类是有限的（`spineLength` 个 slot 的置换）。
+
+**10. ASP 本身是否导致新的退化？**
+
+有，而且是刻意的：同一 functor 的所有 valency 顺序在语法上等价。语法后果是同向 argument 的语序自由：`(X/A)/B` 在标准 CCG 中只接受 `F B A`，加上 ASP 后 `F A B` 也推出 `X`（`lexVAB_full_appAsp`），而不加 ASP 时前缀 `(X/A)/B A` 卡死（`lexVAB_prefix_irreducible_app`）。谁是主语、谁是宾语这类角色信息在本轮纯语法层无法区分，这正是下一轮要用 lambda-argument permutation 同步处理的内容。ASP 不改变 head，不改变 slash 方向，不进入 argument（`ASP.eq_of_atom_slash`：`X\(A/B)` 是 ASP 不动点；`ASP.arg_mem`：每个 argument category 原样保留），所以它不会把不同 head 或不同方向的 category 混同。
+
+## C. Derives 中的开关
+
+`Rules` 的一元字段现为 `unary`，ASP 作为一元规则加入：
+
+| 规则集 | `unary` | `bin` |
+|---|---|---|
+| `Rules.app` | 无 | `App`（仅 FA、BA） |
+| `Rules.appAsp` | `ASP` | `App` |
+| `Rules.appCompAsp` | `ASP` | `Combine`（FA、BA、任意阶广义组合） |
+| `R.withASP` | `R.unary ∨ ASP` | `R.bin` |
+
+`Rules.appAsp` 与 `Rules.app.withASP` 互相 `≤`（`appAsp_le_withASP_app`, `withASP_app_le_appAsp`），`appCompAsp` 与 `noTR.withASP` 同理。TR 在这两个规则集中关闭；ASP 没有编码进 lexical category 或二元规则，`Derives.unary` 是唯一入口。
+
+## D. 正面结果
+
+- `Derives.asp_reassoc`：对任意 `R ⊇ appAsp`，若 `[i,k) ⇒ A`、`[k,j) ⇒ (H\A)/B`、`[j,l) ⇒ B`，则 `[i,j) ⇒ H/B` 且 `[i,l) ⇒ H`。这是 ASP 的核心用途：一个 functor 先吃哪个 argument 可以对调。
+- `lexSVO_prefix₂ / lexSVO_leftSpine / lexSVO_prefixReducible`：`John likes Mary` 在 `FA/BA + ASP` 下 `John likes ⇒ S/NP`，整句 left-branching 推出 `S`，prefix reducible。

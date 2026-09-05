@@ -63,8 +63,8 @@ theorem Combine.fcomp₁ (X Y Z : Cat Atom) : Combine (X ⫽ Y) (Y ⫽ Z) (X ⫽
 
 /-- A rule set: a unary relation (type raising) and a binary relation (combination). -/
 structure Rules (Atom : Type) where
-  /-- Unary rules applied to a single constituent (type raising). -/
-  tr : Cat Atom → Cat Atom → Prop
+  /-- Unary rules applied to a single constituent (type raising, ASP, …). -/
+  unary : Cat Atom → Cat Atom → Prop
   /-- Binary rules combining two adjacent constituents. -/
   bin : Cat Atom → Cat Atom → Cat Atom → Prop
 
@@ -72,11 +72,16 @@ namespace Rules
 
 /-- `R₁ ≤ R₂` : every rule of `R₁` is a rule of `R₂`. -/
 instance : LE (Rules Atom) :=
-  ⟨fun R₁ R₂ => (∀ A B, R₁.tr A B → R₂.tr A B) ∧ (∀ A B C, R₁.bin A B C → R₂.bin A B C)⟩
+  ⟨fun R₁ R₂ => (∀ A B, R₁.unary A B → R₂.unary A B) ∧ (∀ A B C, R₁.bin A B C → R₂.bin A B C)⟩
 
 theorem le_def {R₁ R₂ : Rules Atom} :
-    R₁ ≤ R₂ ↔ (∀ A B, R₁.tr A B → R₂.tr A B) ∧ (∀ A B C, R₁.bin A B C → R₂.bin A B C) :=
+    R₁ ≤ R₂ ↔ (∀ A B, R₁.unary A B → R₂.unary A B) ∧ (∀ A B C, R₁.bin A B C → R₂.bin A B C) :=
   Iff.rfl
+
+theorem le_refl (R : Rules Atom) : R ≤ R := ⟨fun _ _ h => h, fun _ _ _ h => h⟩
+
+theorem le_trans {R₁ R₂ R₃ : Rules Atom} (h₁ : R₁ ≤ R₂) (h₂ : R₂ ≤ R₃) : R₁ ≤ R₃ :=
+  ⟨fun _ _ h => h₂.1 _ _ (h₁.1 _ _ h), fun _ _ _ h => h₂.2 _ _ _ (h₁.2 _ _ _ h)⟩
 
 /-- The full system: FA + BA + generalized (forward & backward) composition + unrestricted TR. -/
 def full : Rules Atom := ⟨TypeRaise, Combine⟩

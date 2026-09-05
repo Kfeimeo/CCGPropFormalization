@@ -20,8 +20,9 @@ variable {Atom : Type} {n : ℕ}
 inductive Derives (R : Rules Atom) (lex : Fin n → Cat Atom) : ℕ → ℕ → Cat Atom → Prop
   /-- A single word is its lexical category. -/
   | lex (i : Fin n) : Derives R lex i (i + 1) (lex i)
-  /-- A unary rule (type raising) applied to any constituent. -/
-  | tr {i j : ℕ} {C D : Cat Atom} : Derives R lex i j C → R.tr C D → Derives R lex i j D
+  /-- A unary rule (type raising in `Rules.full`, argument-spine permutation in `Rules.appAsp`)
+  applied to any constituent. -/
+  | unary {i j : ℕ} {C D : Cat Atom} : Derives R lex i j C → R.unary C D → Derives R lex i j D
   /-- Two adjacent constituents combined by a binary rule. -/
   | bin {i k j : ℕ} {A B C : Cat Atom} :
       Derives R lex i k A → Derives R lex k j B → R.bin A B C → Derives R lex i j C
@@ -30,7 +31,7 @@ inductive Derives (R : Rules Atom) (lex : Fin n → Cat Atom) : ℕ → ℕ → 
 single word (possibly type raised).  `LeftSpine R lex i j C` ⊆ `Derives R lex i j C`. -/
 inductive LeftSpine (R : Rules Atom) (lex : Fin n → Cat Atom) : ℕ → ℕ → Cat Atom → Prop
   | lex (i : Fin n) : LeftSpine R lex i (i + 1) (lex i)
-  | tr {i j : ℕ} {C D : Cat Atom} : LeftSpine R lex i j C → R.tr C D → LeftSpine R lex i j D
+  | unary {i j : ℕ} {C D : Cat Atom} : LeftSpine R lex i j C → R.unary C D → LeftSpine R lex i j D
   | bin {i j : ℕ} {A B C : Cat Atom} :
       LeftSpine R lex i j A → LeftSpine R lex j (j + 1) B → R.bin A B C →
       LeftSpine R lex i (j + 1) C
@@ -47,7 +48,7 @@ variable {R : Rules Atom} {lex : Fin n → Cat Atom}
 theorem lt_and_le {i j : ℕ} {C : Cat Atom} (h : Derives R lex i j C) : i < j ∧ j ≤ n := by
   induction h with
   | lex i => exact ⟨Nat.lt_succ_self _, i.isLt⟩
-  | tr _ _ ih => exact ih
+  | unary _ _ ih => exact ih
   | bin _ _ _ ih₁ ih₂ => exact ⟨lt_trans ih₁.1 ih₂.1, ih₂.2⟩
 
 theorem lt {i j : ℕ} {C : Cat Atom} (h : Derives R lex i j C) : i < j := h.lt_and_le.1
@@ -59,7 +60,7 @@ theorem mono {R' : Rules Atom} (hR : R ≤ R') {i j : ℕ} {C : Cat Atom}
     (h : Derives R lex i j C) : Derives R' lex i j C := by
   induction h with
   | lex i => exact Derives.lex i
-  | tr _ hCD ih => exact tr ih (hR.1 _ _ hCD)
+  | unary _ hCD ih => exact unary ih (hR.1 _ _ hCD)
   | bin _ _ hABC ih₁ ih₂ => exact bin ih₁ ih₂ (hR.2 _ _ _ hABC)
 
 /-- Derivations only look at the words inside the span. -/
@@ -68,31 +69,31 @@ theorem congr {lex' : Fin n → Cat Atom} {i j : ℕ} {C : Cat Atom}
     Derives R lex' i j C := by
   induction h with
   | lex i => rw [hl i le_rfl (Nat.lt_succ_self _)]; exact Derives.lex i
-  | tr _ hCD ih => exact tr (ih hl) hCD
+  | unary _ hCD ih => exact unary (ih hl) hCD
   | bin h₁ h₂ hABC ih₁ ih₂ =>
     exact bin (ih₁ fun k h₁ h₂ => hl k h₁ (lt_trans h₂ (Derives.lt ‹_›)))
       (ih₂ fun k h₁' h₂' => hl k (le_trans (le_of_lt (Derives.lt ‹_›)) h₁') h₂') hABC
 
-/-- A one-word span `[i, i+1)` derives exactly the `R.tr`-closure of the lexical category. -/
+/-- A one-word span `[i, i+1)` derives exactly the `R.unary`-closure of the lexical category. -/
 theorem single {i j : ℕ} {C : Cat Atom} (h : Derives R lex i j C) (hj : j = i + 1) (hi : i < n) :
-    Relation.ReflTransGen R.tr (lex ⟨i, hi⟩) C := by
+    Relation.ReflTransGen R.unary (lex ⟨i, hi⟩) C := by
   induction h with
   | lex i₀ =>
     have : (⟨i₀, hi⟩ : Fin n) = i₀ := Fin.ext rfl
     rw [this]
-  | tr _ hCD ih => exact (ih hj hi).tail hCD
+  | unary _ hCD ih => exact (ih hj hi).tail hCD
   | bin h₁ h₂ _ _ _ =>
     have := h₁.lt; have := h₂.lt; omega
 
 /-- A two-word span `[i, i+2)` is: type raise each word, combine once, type raise the result. -/
 theorem two {i j : ℕ} {C : Cat Atom} (h : Derives R lex i j C) (hj : j = i + 2)
     (hi : i < n) (hi' : i + 1 < n) :
-    ∃ A B C₀, Relation.ReflTransGen R.tr (lex ⟨i, hi⟩) A ∧
-      Relation.ReflTransGen R.tr (lex ⟨i + 1, hi'⟩) B ∧ R.bin A B C₀ ∧
-      Relation.ReflTransGen R.tr C₀ C := by
+    ∃ A B C₀, Relation.ReflTransGen R.unary (lex ⟨i, hi⟩) A ∧
+      Relation.ReflTransGen R.unary (lex ⟨i + 1, hi'⟩) B ∧ R.bin A B C₀ ∧
+      Relation.ReflTransGen R.unary C₀ C := by
   induction h with
   | lex i₀ => omega
-  | tr _ hCD ih =>
+  | unary _ hCD ih =>
     obtain ⟨A, B, C₀, hA, hB, hbin, hC⟩ := ih hj hi hi'
     exact ⟨A, B, C₀, hA, hB, hbin, hC.tail hCD⟩
   | @bin i k j A B C h₁ h₂ hABC _ _ =>
@@ -110,7 +111,7 @@ variable {R : Rules Atom} {lex : Fin n → Cat Atom}
 theorem toDerives {i j : ℕ} {C : Cat Atom} (h : LeftSpine R lex i j C) : Derives R lex i j C := by
   induction h with
   | lex i => exact Derives.lex i
-  | tr _ hCD ih => exact Derives.tr ih hCD
+  | unary _ hCD ih => exact Derives.unary ih hCD
   | bin _ _ hABC ih₁ ih₂ => exact Derives.bin ih₁ ih₂ hABC
 
 theorem lt {i j : ℕ} {C : Cat Atom} (h : LeftSpine R lex i j C) : i < j := h.toDerives.lt
@@ -120,19 +121,19 @@ theorem mono {R' : Rules Atom} (hR : R ≤ R') {i j : ℕ} {C : Cat Atom}
     (h : LeftSpine R lex i j C) : LeftSpine R' lex i j C := by
   induction h with
   | lex i => exact LeftSpine.lex i
-  | tr _ hCD ih => exact tr ih (hR.1 _ _ hCD)
+  | unary _ hCD ih => exact unary ih (hR.1 _ _ hCD)
   | bin _ _ hABC ih₁ ih₂ => exact bin ih₁ ih₂ (hR.2 _ _ _ hABC)
 
 /-- Inversion for left-spine derivations: a span is either a single (type-raised) word, or the
 result of combining a left-spine derivation of `[i, k)` with the word `k`, followed by type
 raising. -/
 theorem inv {i j : ℕ} {C : Cat Atom} (h : LeftSpine R lex i j C) :
-    (∃ hi : i < n, j = i + 1 ∧ Relation.ReflTransGen R.tr (lex ⟨i, hi⟩) C) ∨
+    (∃ hi : i < n, j = i + 1 ∧ Relation.ReflTransGen R.unary (lex ⟨i, hi⟩) C) ∨
     (∃ k A B C₀, j = k + 1 ∧ LeftSpine R lex i k A ∧ LeftSpine R lex k (k + 1) B ∧
-      R.bin A B C₀ ∧ Relation.ReflTransGen R.tr C₀ C) := by
+      R.bin A B C₀ ∧ Relation.ReflTransGen R.unary C₀ C) := by
   induction h with
   | lex i => exact Or.inl ⟨i.isLt, rfl, Relation.ReflTransGen.refl⟩
-  | tr _ hCD ih =>
+  | unary _ hCD ih =>
     rcases ih with ⟨hi, hj, hC⟩ | ⟨k, A, B, C₀, hj, h₁, h₂, hbin, hC⟩
     · exact Or.inl ⟨hi, hj, hC.tail hCD⟩
     · exact Or.inr ⟨k, A, B, C₀, hj, h₁, h₂, hbin, hC.tail hCD⟩
