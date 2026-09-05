@@ -205,13 +205,15 @@ example : Derives (Rules.fullStrACASF At.s) (lexWhatApp At.s At.np) 0 4 S ∧
 example : SA NP ((S ⧵ NP) ⫽ NP) (S ⫽ NP) := sa_np_likes At.s At.np
 example : SA ((S ⧵ NP) ⫽ NP) NP (S ⧵ NP) := SA.of_fa (S ⧵ NP) NP
 /-- Audit 8: every original derivation is a product run (even a plain stack run)… -/
-example : Run (TopReduce Combine) johnLikesMary 3 S :=
+example : Run (TopReduce Combine) johnLikesMary 3 [S] :=
   original_ccg_to_stack_ltr _ ((Derives.bin (Derives.lex 0)
     (Derives.bin (Derives.lex 1) (Derives.lex 2) (App.fa (S ⧵ NP) NP)) (App.ba S NP) :
     Derives Rules.app johnLikesMary 0 3 S).mono Rules.app_le_noTR)
 /-- …the trivial prefix product `NP * (S\NP)/NP` is a reachable state… -/
-example : Run (Reduce ProdBin) johnLikesMary 2 [NP, (S ⧵ NP) ⫽ NP] :=
-  (RunFrom.refl.shift (by omega)).shift (by omega)
+example : Run (Reduce ProdBin) johnLikesMary 2 [NP, (S ⧵ NP) ⫽ NP] := by
+  have h0 : (0 : ℕ) < 3 := by decide
+  have h1 : (1 : ℕ) < 3 := by decide
+  exact (RunFrom.refl.shift h0).shift h1
 /-- …but eager reduction fails on right adjunction while lazy reduction succeeds. -/
 example : Run (Reduce ProdBin) (lexAdj At.s At.np) 4 [S] ∧
     ¬ EagerRun (Reduce ProdBin) (lexAdj At.s At.np) 4 [S] :=
