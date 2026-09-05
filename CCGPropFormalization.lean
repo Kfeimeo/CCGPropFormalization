@@ -13,4 +13,6 @@ import CCGPropFormalization.Audit.AC
 import CCGPropFormalization.Audit.STR
 import CCGPropFormalization.Audit.Adjunct
 import CCGPropFormalization.Audit.ASF
+import CCGPropFormalization.Product
+import CCGPropFormalization.Audit.Product
 import CCGPropFormalization.Examples

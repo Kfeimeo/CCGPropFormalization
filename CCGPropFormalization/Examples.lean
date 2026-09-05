@@ -5,6 +5,7 @@ import CCGPropFormalization.Audit.ASP
 import CCGPropFormalization.Audit.AC
 import CCGPropFormalization.Audit.Adjunct
 import CCGPropFormalization.Audit.ASF
+import CCGPropFormalization.Audit.Product
 
 /-!
 # Small `S/NP` examples
@@ -197,5 +198,30 @@ example : GrammAcceptable (Rules.fullStrACASF At.s) (lexAdj At.s At.np) S :=
 example : Derives (Rules.fullStrACASF At.s) (lexWhatApp At.s At.np) 0 4 S ∧
     ¬ GrammAcceptable (Rules.fullStrACASF At.s) (lexWhatApp At.s At.np) S :=
   lexWhatApp_not_grammAcceptable (by decide)
+
+/-! ## Product + Spine Application -/
+
+/-- SA: `NP  (S\NP)/NP ⇒ S/NP` (inner slot), and FA/BA are outermost-slot instances. -/
+example : SA NP ((S ⧵ NP) ⫽ NP) (S ⫽ NP) := sa_np_likes At.s At.np
+example : SA ((S ⧵ NP) ⫽ NP) NP (S ⧵ NP) := SA.of_fa (S ⧵ NP) NP
+/-- Audit 8: every original derivation is a product run (even a plain stack run)… -/
+example : Run (TopReduce Combine) johnLikesMary 3 S :=
+  original_ccg_to_stack_ltr _ ((Derives.bin (Derives.lex 0)
+    (Derives.bin (Derives.lex 1) (Derives.lex 2) (App.fa (S ⧵ NP) NP)) (App.ba S NP) :
+    Derives Rules.app johnLikesMary 0 3 S).mono Rules.app_le_noTR)
+/-- …the trivial prefix product `NP * (S\NP)/NP` is a reachable state… -/
+example : Run (Reduce ProdBin) johnLikesMary 2 [NP, (S ⧵ NP) ⫽ NP] :=
+  (RunFrom.refl.shift (by omega)).shift (by omega)
+/-- …but eager reduction fails on right adjunction while lazy reduction succeeds. -/
+example : Run (Reduce ProdBin) (lexAdj At.s At.np) 4 [S] ∧
+    ¬ EagerRun (Reduce ProdBin) (lexAdj At.s At.np) 4 [S] :=
+  lexAdj_not_eager (by decide)
+/-- Eager runs for `NP NP (S\NP)\NP` and `what apparently Mary likes`. -/
+example : EagerRun (Reduce ProdBin) (lexSOV At.s At.np) 3 [S] := lexSOV_eager
+example : EagerRun (Reduce ProdBin) (lexWhatApp At.s At.np) 4 [S] := lexWhatApp_eager (by decide)
+/-- Composition is necessary; SA is strictly weaker than ASP. -/
+example : ¬ Run (Reduce AppSA) (lexComp At.s At.np) 3 [S] := (lexComp_not_run_appSA (by decide)).2
+example : Derives Rules.appAsp (lexPerm At.s At.np) 0 2 S ∧ ¬ Run (Reduce ProdBin) (lexPerm At.s At.np) 2 [S] :=
+  ⟨lexPerm_appAsp At.s At.np, lexPerm_not_run (by decide)⟩
 
 end CCG.Examples

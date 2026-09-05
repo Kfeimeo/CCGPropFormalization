@@ -265,6 +265,8 @@ CCGPropFormalization/
   Audit/STR.lean                     -- 第四轮：audit 6，S-targeted TR，命题 1 与正面例子
   Audit/Adjunct.lean                 -- 第四轮：audit 6，"John likes Mary madly"，命题 2 反例
   Audit/ASF.lean                     -- 第五轮：audit 7，Argument-Spine Fusion，"what apparently Mary likes"
+  Product.lean                       -- 第六轮：Product buffer、Spine Application、runs、simulation 定理
+  Audit/Product.lean                 -- 第六轮：audit 8，急切归约反例、Bⁿ 必要性、SA ⊊ ASP
   Examples.lean                      -- S/NP 例子与实例（含 ASP 的 decide 例子）
 ```
 
@@ -508,3 +510,72 @@ inductive ASF : Cat Atom → Cat Atom → Prop
 **失败结构（与第四轮不同）**：`what` 需要一个 `S/NP`，`apparently` 的 head 是 `S`，只有与后文组合之后才变成 `S/NP`。所有组合规则要求 head 精确匹配，所以 `S/(S/NP)` 与 `S/S` 无法组合；AC 只能把 `apparently` 当作**参数**捕获，得到 `S/((S/NP)\(S/S))`，要求后缀提供一个以 `S/S` 为左参数的函子；而 `Mary likes` 的全部可推导范畴都是 head 为 `S` 的前向函子（`derivesW24`），永远不含 `S/S`。ASF 在这里完全不触发：前缀侧每个范畴只有一个 slot，动词 `(S\NP)/NP` 的两个 slot 方向相反（`ASF.not_mixed`）。证明用不变量 `InvW`：状态恒为 `S/Z`，`Z` 是后向函子且不等于 `S\NP`、`(S/NP)\NP`（后缀唯一可能提供的后向范畴），对 ASP、STR、ASF、FA、BA、任意阶组合、AC 逐条验证。
 
 **缺的是什么**：不是 slot 融合，而是"向参数内部组合"：`X/(Y/Z), Y/W ⇒ X/(W/Z)`，即 Hoyt–Baldridge (2008) 的 D 组合子。它在 Lambek 演算中有效（`Y/W ∘ W/Z ⇒ Y/Z` 再 FA），并且正是为这类抽取 + 副词的增量分析而提出的。ASF 与 D 处理两个正交的问题：ASF 让后向附加语接受已经合并的前缀，D 让前向函子越过一个 head 不匹配的中间函子。
+
+
+---
+
+# 第六轮：Product + Spine Application（最小系统）
+
+本轮停用 TR / STR / AC / ASP / ASF，只保留
+
+```
+FA/BA + generalized composition + Product (*) + Spine Application (SA)
+```
+
+文件：`Product.lean`、`Audit/Product.lean`。
+
+## A. 形式化
+
+- **Product**：`A₁ * ⋯ * Aₖ` 用规范展平表示 `Buffer := List (Cat Atom)`。结合律是定义性的（`List.append_assoc`），没有交换律。Product 只出现在 parser state 的顶层，不出现在 slash 内部，所以 `Cat` 本身不变（题目允许的 canonical list 方案）。
+- **Product introduction** = `RunFrom.shift`（列表拼接）；**context-closed reduction** `L*(A*B)*R ⇒ L*C*R` = `Reduce bin`；栈式版本（只归约最近两个成分）= `TopReduce bin`。
+- **SA**（`SA`）：`A, X[Γ,(\,A),Δ] ⇒ X[Γ,Δ]` 与 `X[Γ,(/,A),Δ], A ⇒ X[Γ,Δ]`，用 `flattenSpine/rebuildSpine` 在 spine 任意位置删除一个匹配 slot，其余 slot 顺序不变。FA/BA 是 slot 最外层的实例（`SA.of_fa`, `SA.of_ba`）。`SA.asp_app : SA ⊆ ASP ; App`。
+- **Run**：`RunFrom red lex i st j st'`，从第 `i` 个词后的状态 `st` 出发，shift 与 `red` 归约任意交错，到第 `j` 个词后的 `st'`；`Run red lex n [S]` 即 strict left-to-right product run。
+- **EagerRun**：每次 shift 之后必须归约到不可再归约的正规形（`Irreducible`）。
+
+## B. 核心 theorem audit
+
+| 命题 | 结果 | Lean |
+|---|---|---|
+| `original_ccg_to_product_ltr`：原始 derivation（FA/BA + Bⁿ）⇒ 存在 left-to-right product run 以 `S` 结束 | **成立，但平凡** | `original_ccg_to_product_ltr` |
+| 同上，只用栈（`TopReduce`）且不用 SA | 成立 | `original_ccg_to_stack_ltr`, `Derives.runFrom` |
+| 原始 derivation 只用 FA/BA 时，`FA/BA + Product` 就够（不需要 SA、Bⁿ） | 成立 | `original_app_to_stack_ltr` |
+| prefix reducibility | **平凡**：`w₁*⋯*wᵢ` 永远可达 | `prefix_state_trivial` |
+| grammatical acceptability | **平凡**：纯 product 状态在任意上下文中都能继续归约到 `S` | `product_grammAcceptable`, `trivial_state_continues`, `Derives.reduce_ctx` |
+| 急切归约（每步归约到正规形） | **不成立**："John likes Mary madly" 被迫经过 `[S/NP]`、`[S]`，随后 `madly` 无法附着 | `lexAdj_not_eager` |
+| 急切归约的正面例子 | `NP NP (S\NP)\NP`、"what apparently Mary likes" 都有急切 run | `lexSOV_eager`, `lexWhatApp_eager` |
+
+平凡的原因：product 状态可以**完全不归约**。先把整句 shift 进 buffer，再按原树后序在上下文里做归约（`Derives.reduce_ctx`），任何 derivation 都能被模拟；连 context-closed reduction 都不必要，栈顶归约（标准 shift-reduce）就够（`Derives.runFrom`）。于是"单一结构化 prefix state"这个目标被 product 本身消解了：state 就是 `w₁*⋯*wᵢ`。有内容的问题是"允许多少延迟"，两端分别是：
+
+- **完全延迟**（lazy）：一切成立，等价于把整个 derivation 树推迟到句末。
+- **零延迟**（eager）：右向附加语失败，原因和第四轮相同——`madly` 需要 `S\NP`，而急切归约已经把 `John likes Mary` 合并为 `S`，没有任何规则能重新打开它。两轮的失败结构一致，说明这不是规则集的偶然缺陷，而是 left-branching 与 right-adjunction 的根本冲突；能修的只有 ASF 这类 slot 融合（本轮禁用）或 revealing。
+
+`lexAdj_not_eager` 的证明：急切 run 在此例是确定的（`lexAdj_eager₁..₄`：`[NP]`、`[S/NP]`、`[S]`、`[S, madly]`），每步用 `rtg_pair`（两元素 buffer 的唯一归约结果）与 `Reduce.pair_iff`。
+
+## C. 额外检查
+
+1. **Product + context-closed reduction 是否让 prefix reducibility 平凡成立？** 是（`prefix_state_trivial`）；grammatical acceptability 也平凡（`product_grammAcceptable`）。
+2. **SA 是否真的比 unrestricted ASP 弱？** 是，严格弱。`SA.asp_app` 证明每一步 SA 都是一次 ASP 旋转加一次 FA/BA；反向不成立：`lexPerm = [(S\NP)/NP, S\((S/NP)\NP)]` 在 `FA/BA + ASP` 下推出 `S`（`lexPerm_appAsp`），在 `FA/BA + Bⁿ + SA` 下两个词永远不能合并（`lexPerm_not_run`）。SA 只能"应用到非最外层 slot"，从不改变成分本身的范畴。但 SA 保留了 ASP 的一部分语序坍缩：`(X/A)/B` 在 SA 下也接受 `F A B`，因为右向 SA 可以先删内层 `(/,A)`。
+3. **generalized composition 是否仍然必要？** 是。`lexComp = [S/(S/NP), S/S, S/NP]` 用 `B¹` 推出 `S`，但 `FA/BA + Product + SA` 下没有任何相邻对可以归约，所有可达状态都是纯前缀 product（`lexComp_run_words`, `lexComp_not_run_appSA`）。交叉组合同理（"John likes madly Mary" 只能靠 `B×`）。
+4. **仅靠 `FA/BA + Product + SA` 是否足够？** 对只用 FA/BA 的原始 derivation 足够，且 SA 根本用不上（`original_app_to_stack_ltr`）；对用了 Bⁿ 的 derivation 不够（上一条）。
+5. **Product 是否本质上是 ordered parser stack？** 是。`Buffer` 就是栈，`TopReduce` 是标准 shift-reduce；`Reduce` 允许在任意深度归约，识别能力相同（两者都模拟全部 derivation），区别只在可达的中间状态：栈顶归约要求左分支归约在下一次 shift 之前完成，任意位置归约允许把一切推迟到句末。
+6. **与 Lambek calculus 的关系。** `*` 是 Lambek 的 `•`，`Reduce` 的上下文封闭性是 `•` 的单调性（cut），FA/BA 是 residuation 律 `A/B • B ⊢ A`、`B • A\B ⊢ A`，Bⁿ 在 L 中可证（harmonic）或不可证（crossed）。句子可推导 ⇔ `w₁ • ⋯ • wₙ ⊢ S` 在相应规则片段中可证。SA 一般**不是** L 有效的：删除非最外层的 `(\,A)` 时，若外面还有同方向的 `(\,C)`，`A` 必须越过 `C` 的位置，这在非交换的 L 中不可推导（例如 `A • ((X\A)/B)\C ⊢ (X/B)\C` 不成立）；只有被删 slot 外侧全是反方向 slot 时（如 `NP • (S\NP)/NP ⊢ S/NP`，这在 L 中恰是 `(S\NP)/NP ≡ (S/NP)\NP`）SA 才是 L 的定理。所以 SA 是"L 有效的混合方向重结合"加上"同方向参数的语序坍缩"两部分之和。
+
+## D. 最终最小规则集与全部反例（六轮总结）
+
+| 轮 | 规则集 | 命题 | 结果 | 反例 / 机制 |
+|---|---|---|---|---|
+| 1 | FA/BA + Bⁿ + unrestricted TR | prefix reducibility | 平凡为真 | 任意两范畴可合并 |
+| 1 | 无 TR | prefix reducibility | 假 | `X/Y W Y\W` |
+| 1 | 原子目标 TR | prefix reducibility | 假 | `NP NP (S\NP)\NP` |
+| 1 | 全系统 | 同范畴 left-spine 归一化 | 假 | "what John likes" |
+| 2 | FA/BA (+Bⁿ) + ASP | prefix reducibility | 假 | `NP NP (S\NP)\NP` |
+| 3 | + AC | prefix reducibility | 假 | 同上；AC 门控式退化 |
+| 4 | + STR | prefix reducibility | 平凡为真 | STR + AC 捕获一切 |
+| 4 | + STR | grammatical acceptability | 假 | "John likes Mary madly" |
+| 5 | + ASF | grammatical acceptability | 假 | "what apparently Mary likes"（缺 D 组合子） |
+| 6 | FA/BA + Bⁿ + Product + SA | left-to-right product run | 平凡为真 | 完全延迟 |
+| 6 | 同上 | 急切归约 | 假 | "John likes Mary madly" |
+| 6 | FA/BA + Product + SA | 模拟 Bⁿ derivation | 假 | `S/(S/NP) S/S S/NP` |
+| 6 | SA vs ASP | SA ⊊ ASP | 严格弱 | `[(S\NP)/NP, S\((S/NP)\NP)]` |
+
+最终最小规则集：**FA/BA + Bⁿ + Product**（栈顶归约即可）就能模拟全部原始 derivation；SA 对模拟不必要，它的作用只是允许更早的（但仍不够急切的）归约。要得到非平凡的"单一结构化 prefix state"，必须给出延迟策略的约束；在零延迟下，右向附加语是不可克服的反例。
