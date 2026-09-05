@@ -264,6 +264,7 @@ CCGPropFormalization/
   Continuation.lean                  -- 第四轮：Continues / GrammAcceptable
   Audit/STR.lean                     -- 第四轮：audit 6，S-targeted TR，命题 1 与正面例子
   Audit/Adjunct.lean                 -- 第四轮：audit 6，"John likes Mary madly"，命题 2 反例
+  Audit/ASF.lean                     -- 第五轮：audit 7，Argument-Spine Fusion，"what apparently Mary likes"
   Examples.lean                      -- S/NP 例子与实例（含 ASP 的 decide 例子）
 ```
 
@@ -478,3 +479,32 @@ def GrammAcceptable (R) (lex) (C) : Prop :=
 
 - 命题 1 的退化和第一轮同源；`STR + AC` 是 unrestricted TR 的"`T := S`"实例，仍然让"存在完整 derivation"变成恒真式。
 - `GrammAcceptable` 是把"residual continuation 必须与真实后缀匹配"精确化后的命题，它才是有内容的问题；在本系统里它对一些自然句子成立（`lexSOV`、`lexWhat`），对右向附加语不成立。要覆盖后者需要新的机制（例如 Pareschi–Steedman 的 revealing，或允许附加语类型 `(S\NP)\(S\NP)` 参与某种 AC），这超出了本轮规则集。
+
+
+---
+
+# 第五轮：Argument-Spine Fusion (ASF)
+
+```lean
+inductive ASF : Cat Atom → Cat Atom → Prop
+  | bwd : flattenSpine C = (H, l₁ ++ ⟨bwd, A⟩ :: ⟨bwd, B⟩ :: l₂) → App A B D →
+          C' = rebuildSpine H (l₁ ++ ⟨bwd, D⟩ :: l₂) → ASF C C'          -- ASF-BWD
+  | fwd : flattenSpine C = (H, l₁ ++ ⟨fwd, A⟩ :: ⟨fwd, B⟩ :: l₂) → App B A D →
+          C' = rebuildSpine H (l₁ ++ ⟨fwd, D⟩ :: l₂) → ASF C C'          -- ASF-FWD
+```
+
+按文档的 spine 表述实现为相邻 slot 的局部改写（可发生在 spine 任何位置），只调用 `App`（FA/BA），同方向、相邻、argument 不透明、单向收缩。文档的两条 category-level schema 是实例 `ASF.bwd_outer : App A B D → ASF ((X⧵A)⧵B) (X⧵D)` 与 `ASF.fwd_outer : App B A D → ASF ((X⫽A)⫽B) (X⫽D)`。已证性质：`ASF.head_eq`（head 不变）、`ASF.spineLength`（恰好少一个 slot）、`ASF.two_le`、`ASF.irrefl`（不是等价关系，没有逆向展开）、`ASF.not_mixed`（混合方向不融合）、`ASF.not_of_le_one`（≤1 slot 的范畴不动）。典型例子 `ASF.adverb : ASF ((S⧵NP)⧵(S⧵NP)) (S⧵S)`。
+
+规则集 `Rules.fullStrACASF s = FA/BA + Bⁿ + ASP + AC + STR + ASF`。
+
+**结论**
+
+| 命题 | 结果 | Lean |
+|---|---|---|
+| 第四轮反例 "John likes Mary madly" | **已修复**：`John likes ⇒ S/NP`，`⇒ S`，`madly ⇒ S\S`，BA | `lexAdj_grammAcceptable_asf` |
+| 命题 2：`FA/BA + Bⁿ + ASP + AC + STR + ASF` ⇒ grammatical acceptability | **仍不成立** | `lexWhatApp_not_grammAcceptable` |
+| 新反例 | "what apparently Mary likes" `[S/(S/NP), S/S, NP, (S\NP)/NP]`，前缀 `what apparently` | `Audit/ASF.lean` |
+
+**失败结构（与第四轮不同）**：`what` 需要一个 `S/NP`，`apparently` 的 head 是 `S`，只有与后文组合之后才变成 `S/NP`。所有组合规则要求 head 精确匹配，所以 `S/(S/NP)` 与 `S/S` 无法组合；AC 只能把 `apparently` 当作**参数**捕获，得到 `S/((S/NP)\(S/S))`，要求后缀提供一个以 `S/S` 为左参数的函子；而 `Mary likes` 的全部可推导范畴都是 head 为 `S` 的前向函子（`derivesW24`），永远不含 `S/S`。ASF 在这里完全不触发：前缀侧每个范畴只有一个 slot，动词 `(S\NP)/NP` 的两个 slot 方向相反（`ASF.not_mixed`）。证明用不变量 `InvW`：状态恒为 `S/Z`，`Z` 是后向函子且不等于 `S\NP`、`(S/NP)\NP`（后缀唯一可能提供的后向范畴），对 ASP、STR、ASF、FA、BA、任意阶组合、AC 逐条验证。
+
+**缺的是什么**：不是 slot 融合，而是"向参数内部组合"：`X/(Y/Z), Y/W ⇒ X/(W/Z)`，即 Hoyt–Baldridge (2008) 的 D 组合子。它在 Lambek 演算中有效（`Y/W ∘ W/Z ⇒ Y/Z` 再 FA），并且正是为这类抽取 + 副词的增量分析而提出的。ASF 与 D 处理两个正交的问题：ASF 让后向附加语接受已经合并的前缀，D 让前向函子越过一个 head 不匹配的中间函子。

@@ -4,6 +4,7 @@ import CCGPropFormalization.Audit.Strong
 import CCGPropFormalization.Audit.ASP
 import CCGPropFormalization.Audit.AC
 import CCGPropFormalization.Audit.Adjunct
+import CCGPropFormalization.Audit.ASF
 
 /-!
 # Small `S/NP` examples
@@ -178,5 +179,23 @@ discharged by `Mary madly`. -/
 example : Derives (Rules.fullStrAC At.s) (lexAdj At.s At.np) 0 4 S ∧
     ¬ GrammAcceptable (Rules.fullStrAC At.s) (lexAdj At.s At.np) S :=
   lexAdj_not_grammAcceptable (by decide)
+
+/-! ## Argument-spine fusion (ASF) -/
+
+/-- `(S\NP)\(S\NP) ⇒ S\S`. -/
+example : ASF ((S ⧵ NP) ⧵ (S ⧵ NP)) (S ⧵ S) := ASF.adverb S NP
+/-- `(S/NP)/N ⇒ S/NP`?  No: `N NP` do not combine.  But `((S/NP)/(NP\N))/N`: `N (NP\N) ⇒ NP`… the
+forward schema checks `App B A C` in surface order `[functor] B A`: `(X/(S\NP))/NP ⇒ X/S`. -/
+example : ASF ((S ⫽ (S ⧵ NP)) ⫽ NP) (S ⫽ S) := ASF.fwd_outer (App.ba S NP)
+/-- Mixed directions never fuse, and one-slot categories are inert. -/
+example : ¬ ASF ((S ⧵ NP) ⫽ NP) (S ⧵ S) := ASF.not_mixed (a := At.s) (d₁ := .bwd) (d₂ := .fwd) (by decide)
+example (C' : Cat At) : ¬ ASF (S ⫽ NP) C' := ASF.not_of_le_one (by simp [spineLength])
+/-- Audit 7: `John likes Mary madly` is repaired… -/
+example : GrammAcceptable (Rules.fullStrACASF At.s) (lexAdj At.s At.np) S :=
+  lexAdj_grammAcceptable_asf At.s At.np
+/-- …but `what apparently Mary likes` derives `S` and is not grammatically acceptable. -/
+example : Derives (Rules.fullStrACASF At.s) (lexWhatApp At.s At.np) 0 4 S ∧
+    ¬ GrammAcceptable (Rules.fullStrACASF At.s) (lexWhatApp At.s At.np) S :=
+  lexWhatApp_not_grammAcceptable (by decide)
 
 end CCG.Examples
