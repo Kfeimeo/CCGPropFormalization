@@ -15,4 +15,6 @@ import CCGPropFormalization.Audit.Adjunct
 import CCGPropFormalization.Audit.ASF
 import CCGPropFormalization.Product
 import CCGPropFormalization.Audit.Product
+import CCGPropFormalization.Prediction
+import CCGPropFormalization.Audit.GAC
 import CCGPropFormalization.Examples

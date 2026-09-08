@@ -267,6 +267,8 @@ CCGPropFormalization/
   Audit/ASF.lean                     -- 第五轮：audit 7，Argument-Spine Fusion，"what apparently Mary likes"
   Product.lean                       -- 第六轮：Product buffer、Spine Application、runs、simulation 定理
   Audit/Product.lean                 -- 第六轮：audit 8，急切归约反例、Bⁿ 必要性、SA ⊊ ASP
+  Prediction.lean                    -- 第七轮：D、GAC、GTR、Transparent Modifier Assumption
+  Audit/GAC.lean                     -- 第七轮：audit 9，GAC 正面覆盖、根范畴不匹配反例、GTR 修正
   Examples.lean                      -- S/NP 例子与实例（含 ASP 的 decide 例子）
 ```
 
@@ -579,3 +581,51 @@ FA/BA + generalized composition + Product (*) + Spine Application (SA)
 | 6 | SA vs ASP | SA ⊊ ASP | 严格弱 | `[(S\NP)/NP, S\((S/NP)\NP)]` |
 
 最终最小规则集：**FA/BA + Bⁿ + Product**（栈顶归约即可）就能模拟全部原始 derivation；SA 对模拟不必要，它的作用只是允许更早的（但仍不够急切的）归约。要得到非平凡的"单一结构化 prefix state"，必须给出延迟策略的约束；在零延迟下，右向附加语是不可克服的反例。
+
+
+---
+
+# 第七轮：GAC、D 与 Transparent Modifier Assumption
+
+文件：`Prediction.lean`、`Audit/GAC.lean`。规则集 `Rules.fullLTR s = FA/BA + Bⁿ + ASP + AC + STR + D + GAC`（ASF、revealing 停用）。
+
+## A. 新定义
+
+```lean
+inductive DComb   -- X/(Y|Z), Y/W ⇒ X/(W|Z)             （D 组合子，内层 slash 保留）
+  | d (X Y Z W) (dz) : DComb (X ⫽ (Y.slash dz Z)) (Y ⫽ W) (X ⫽ (W.slash dz Z))
+
+inductive GAC     -- X/Y, A|Z₁…|Zₙ ⇒ (X/(Y\A))|Z₁…|Zₙ
+  | gac : ReplaceHead A (X ⫽ (Y ⧵ A)) F C → GAC (X ⫽ Y) F C
+
+inductive GTR (g) -- X ⇒ g/(g\X)                          （目标 = 分析目标 g；STR s = GTR (atom s)）
+```
+
+- `GAC.of_ac`：AC 是 spine 为空的 GAC。
+- `GAC.headTR_comp`：**GAC = 对 head 做目标为 Y 的 TR 再做 Bⁿ⁺¹**。这回答了"T 等于什么"：T 就是左边函子 `X/Y` 正在等的 Y，由前缀唯一决定，所以不会像 unrestricted TR 那样让任意两个范畴可合并。
+- TMA：`Transparent C := ∃ X, C = X/X ∨ C = X\X`；`πsyn lex mark` 按词汇标记投影掉 transparent 项，保留其余次序；`WellMarked` 要求只有 transparent 项可被标记；`πsyn_unmarked`：无标记时投影是恒等。
+
+## B. 审计结果
+
+| 例子 | 结果 | Lean |
+|---|---|---|
+| "John the man likes" `[NP, NP/N, N, (S\NP)\NP]` | 可接受，靠 GAC：`S/(S\NP), NP/N ⇒ (S/((S\NP)\NP))/N` | `lexDet_grammAcceptable` |
+| "Read Mary's book" `[S/NP, NP, (NP/N)\NP, N]`（原以为的所有格反例） | 可接受：AC 捕获 Mary，ASP 把 `(NP/N)\NP` 转成 `(NP\NP)/N`，B¹，FA | `lexPoss_grammAcceptable` |
+| "what apparently Mary likes"，只用 D + STR（无 AC/ASP） | 可接受 | `lexWhatApp_dStr` |
+| SOV 所有格、后置词、动词串、嵌套从句、关系从句、并列 | 纸面检查均可接受（ASP + Bⁿ 在后缀侧重组） | — |
+| **"John Mary loves-Q"** `[NP, Q, (S_q\NP)\Q] ⇒ S_q`（根为 S_q 的 SOV 疑问句） | **不可接受** | `lexSOVq_not_grammAcceptable` |
+| 同上，STR 换成 `GTR S_q` | 可接受 | `lexSOVq_grammAcceptable_goal` |
+
+**新反例的结构：根范畴不匹配。** STR 把升格目标钉死为 S，AC/GAC/D 的预测又全部继承这个根。证明用一个极短的不变量：
+
+- `fullLTR_bin_head`：本系统每条二元规则都保持左成分的 head，除非右成分是后向函子且其参数的 head 等于左成分的 head。
+- `fullLTR_rtg_head`：ASP、STR 不改变 head S。
+- `derivesQ02_head`：前缀 `John Mary` 的每个可推导范畴 head 都是 S（两个原子只能靠 STR 起步）。
+- `continuesQ_head`：动词 `(S_q\NP)\Q` 及其 ASP/STR 闭包的参数 head 是 NP、Q，不是 S，所以后向情形永远不触发；head S 一路保持到句末，而根 S_q 的 head 是 s_q ≠ s。
+
+该反例不依赖 transparent modifier（`lexSOVq_noTransparent`），`πsyn` 无标记投影就是原句。它说明 TMA 消除的是"语义修饰"这一类困难，而"根的预测"是另一类：句首那一次升格必须知道整句的目标。修正方案是 `GTR g`，目标取分析目标 g；AC 本来就是这种"目标由所等参数决定"的形式，只有句首升格被硬编码了。修正后在 `Rules.fullLTRg (atom s_q)` 下反例通过。
+
+## C. 目前的整体判断
+
+- 加上 GAC 后，在纸面上检查过的结构类里没有找到除"根不匹配"以外的反例。所有前缀侧规则（AC、GAC、D、STR/GTR）都是 Lambek 演算里 `X/P, G ⇒ X/P'`（`G • P' ⊢ P`）这一 residuation 模式的实例，这是将来做一般性完备性证明的出发点；但 CCG 的 crossed composition 不是 L 有效的，若还有反例，最可能出现在跨越前缀边界的交叉依存处。
+- 加入 GTR 后是否完备，仍是未决问题；本轮没有给出一般定理，只给出了机器验证的覆盖与反例。

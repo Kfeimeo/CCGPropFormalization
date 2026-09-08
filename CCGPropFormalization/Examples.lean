@@ -6,6 +6,7 @@ import CCGPropFormalization.Audit.AC
 import CCGPropFormalization.Audit.Adjunct
 import CCGPropFormalization.Audit.ASF
 import CCGPropFormalization.Audit.Product
+import CCGPropFormalization.Audit.GAC
 
 /-!
 # Small `S/NP` examples
@@ -23,6 +24,8 @@ inductive At
   | s
   | np
   | n
+  | q
+  | sq
   deriving DecidableEq, Repr
 
 /-- `S` -/
@@ -225,5 +228,33 @@ example : EagerRun (Reduce ProdBin) (lexWhatApp At.s At.np) 4 [S] := lexWhatApp_
 example : ¬ Run (Reduce AppSA) (lexComp At.s At.np) 3 [S] := (lexComp_not_run_appSA (by decide)).2
 example : Derives Rules.appAsp (lexPerm At.s At.np) 0 2 S ∧ ¬ Run (Reduce ProdBin) (lexPerm At.s At.np) 2 [S] :=
   ⟨lexPerm_appAsp At.s At.np, lexPerm_not_run (by decide)⟩
+
+/-! ## GAC, D and the Transparent Modifier Assumption -/
+
+/-- GAC = head TR (target `S\NP`) + `B²`: `S/(S\NP), NP/N ⇒ (S/((S\NP)\NP))/N`. -/
+example : GAC (S ⫽ (S ⧵ NP)) (NP ⫽ N) ((S ⫽ ((S ⧵ NP) ⧵ NP)) ⫽ N) := gac_det At.s At.np At.n
+example : ∃ A F', ReplaceHead A ((S ⧵ NP) ⫽ ((S ⧵ NP) ⧵ A)) (NP ⫽ N) F' ∧
+    Combine (S ⫽ (S ⧵ NP)) F' ((S ⫽ ((S ⧵ NP) ⧵ NP)) ⫽ N) :=
+  (gac_det At.s At.np At.n).headTR_comp
+/-- D: `S/(S/NP), S/(S\NP) ⇒ S/((S\NP)/NP)`. -/
+example : DComb (S ⫽ (S ⫽ NP)) (S ⫽ (S ⧵ NP)) (S ⫽ ((S ⧵ NP) ⫽ NP)) := DComb.d S S NP (S ⧵ NP) .fwd
+/-- Positive coverage under `fullLTR`. -/
+example : GrammAcceptable (Rules.fullLTR At.s) (lexDet At.s At.np At.n) S :=
+  lexDet_grammAcceptable At.s At.np At.n
+example : GrammAcceptable (Rules.fullLTR At.s) (lexPoss At.s At.np At.n) S :=
+  lexPoss_grammAcceptable At.s At.np At.n
+example : GrammAcceptable (Rules.dStr At.s) (lexWhatApp At.s At.np) S := lexWhatApp_dStr At.s At.np
+/-- TMA: `(S\NP)\(S\NP)` is transparent, `(NP/N)\NP` is not; the projection of the
+unmarked sentence is the sentence. -/
+example : Transparent ((S ⧵ NP) ⧵ (S ⧵ NP)) := ⟨S ⧵ NP, Or.inr rfl⟩
+example : ∀ i, ¬ Transparent (lexSOVq At.np At.q At.sq i) := lexSOVq_noTransparent At.np At.q At.sq
+example : πsyn (lexSOVq At.np At.q At.sq) (fun _ => false) = [NP, atom At.q, (atom At.sq ⧵ NP) ⧵ atom At.q] := by
+  rw [πsyn_unmarked]; rfl
+/-- The root-mismatch counterexample and its repair. -/
+example : Derives Rules.noTR (lexSOVq At.np At.q At.sq) 0 3 (atom At.sq) ∧
+    ¬ GrammAcceptable (Rules.fullLTR At.s) (lexSOVq At.np At.q At.sq) (atom At.sq) :=
+  lexSOVq_not_grammAcceptable (by decide) (by decide) (by decide)
+example : GrammAcceptable (Rules.fullLTRg (atom At.sq)) (lexSOVq At.np At.q At.sq) (atom At.sq) :=
+  lexSOVq_grammAcceptable_goal
 
 end CCG.Examples
