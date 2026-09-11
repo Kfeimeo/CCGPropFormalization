@@ -269,7 +269,7 @@ CCGPropFormalization/
   Audit/Product.lean                 -- 第六轮：audit 8，急切归约反例、Bⁿ 必要性、SA ⊊ ASP
   Prediction.lean                    -- 第七轮：D、GAC、GTR、Transparent Modifier Assumption
   Audit/GAC.lean                     -- 第七轮：audit 9，GAC 正面覆盖、根范畴不匹配反例、GTR 修正
-tools/ltr_enum.py, calibrate.py, scan.py   -- 第八轮：有界枚举器、校准、扫描
+tools/ltr_enum.py, calibrate.py, scan.py   -- 第八轮：有界枚举器、校准、扫描（results/scan5.txt 为长度 5 结果）
   Examples.lean                      -- S/NP 例子与实例（含 ASP 的 decide 例子）
 ```
 
@@ -640,7 +640,7 @@ inductive GTR (g) -- X ⇒ g/(g\X)                          （目标 = 分析�
 
 **校准**（`tools/calibrate.py`）：前七轮 17 个机器验证过的结论全部复现，包括每个反例失败的前缀位置。
 
-**扫描**（`tools/scan.py`）：27 个自然、TMA 兼容的词汇范畴（无 X/X、X\X），穷举长度 2–4 的全部词串（55 万条），目标 S 与 Sq，原始系统为 FA/BA + Bⁿ（含 crossed），目标系统为 `fullLTRs [S, Sq]` = FA/BA + Bⁿ + ASP + AC + GAC + D + 句类目标 TR。失败用更大上限复核，并标注原始推导是否必须用 crossed composition。
+**扫描**（`tools/scan.py`）：27 个自然、TMA 兼容的词汇范畴（无 X/X、X\X），穷举长度 2–5 的全部词串（长度 ≤ 4 共 55 万条，长度 5 共 1490 万条），目标 S 与 Sq，原始系统为 FA/BA + Bⁿ（含 crossed），目标系统为 `fullLTRs [S, Sq]` = FA/BA + Bⁿ + ASP + AC + GAC + D + 句类目标 TR。失败用更大上限复核，并标注原始推导是否必须用 crossed composition。
 
 | 设置 | 可推导 (句, 目标) 对 | 失败 | 说明 |
 |---|---|---|---|
@@ -663,4 +663,14 @@ N      (S/NP)/N   N          NP\N      ⇒ S
 
 **Lean 侧对应**：`Rules.fullLTRs gs`（`GTRs gs`，目标取自句类列表）与 `Rules.fullLTRg_le_fullLTRs`；`lexSOVq_grammAcceptable_clause` 是 SOV 疑问句在 `[S, S_q]` 目标下的可接受性。
 
-**结论**：在 (i) TMA、(ii) TR 目标为句类原子集合、(iii) 原始推导不跨前缀边界使用 crossed composition 这三个条件下，长度 ≤ 4 的自然词库上没有反例。长度 5 的结果见下。
+**长度 5**（`tools/results/scan5.txt`，1490 万条词串，19 分钟）：可推导 (句, 目标) 对累计 1080 个，累计失败 105 个（长度 4 的 7 个 + 长度 5 的 98 个），105 个全部 `NEEDS-CROSSED`，且全部在更大上限（22）下仍失败。长度 5 的 98 个失败按所含范畴分类（可重叠）：
+
+| 结构 | 个数 | 典型例子 |
+|---|---|---|
+| 冠词/属格与名词被小句隔开（含 NP/N、(NP/N)\NP、(S/NP)/N、NP\N） | 78 | `NP/N NP (S\NP)/S S\NP N`，`NP (NP/N)\NP NP (S\NP)\NP N` |
+| 句子补语在动词左侧（含 (S\NP)\S） | 40 | `NP (S\NP)/NP S/(S\NP) (S\NP)\S NP` |
+| 关系从句核心名词被隔开（含 (N\N)/(S/NP)、(N\N)/(S\NP)） | 9 | `N NP/N (N\N)/(S/NP) S\NP S/NP` |
+
+没有任何失败落在这三类之外：每个失败都是一个前向函子的参数被整个小句隔到另一端、原始推导只能靠跨前缀边界的 crossed composition 桥接。长度 5 没有出现新的失败类型；长度 4 的 4 个"目标只有 Sq"失败在句类目标集合下仍保持通过。
+
+**结论**：在 (i) TMA、(ii) TR 目标为句类原子集合、(iii) 原始推导不跨前缀边界使用 crossed composition 这三个条件下，长度 ≤ 5 的自然词库上没有反例；所有 105 个有界失败都违反 (iii)，且都是无限制 crossed composition 的过度生成语序。这与第七轮的 Lambek 论证一致：前缀侧规则（AC、GAC、D、GTR、Bⁿ harmonic）都是 L 有效的 residuation 实例，crossed composition 不是。仍需注意：这是有界枚举（范畴节点数 ≤ 15/22、长度 ≤ 5、27 个范畴），不是一般性证明。

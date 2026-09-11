@@ -13,6 +13,7 @@ derivations; negative answers are *bounded* negatives.
   (FA/BA + Bⁿ + ASP + AC + GAC + D + clause-type TR), re-checked with a larger bound and
   classified by whether the original derivation needs crossed composition.
 * `recheck.py` — the eleven length-4 failures of the first scan, re-examined.
+* `results/scan5.txt` — full output of `python3 scan.py 5` (105 bounded failures, all needing crossed composition).
 
 ```
 python3 calibrate.py
