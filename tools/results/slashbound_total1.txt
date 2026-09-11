@@ -1,0 +1,26 @@
+kind=total k=1 atoms=['S', 'NP', 'N'] lexicon=21 maxlen=4
+  length 2: cumulative failures 0  (0s)
+  length 3: cumulative failures 717  (4s)
+  length 4: cumulative failures 14129  (375s)
+I appAsp/harm: 459 failures; shortest: ('N/N', 'N/N', 'N') failing prefixes [2]
+I appCompAsp/crossed: 5133 failures; shortest: ('N', 'N/N', 'N\\N') failing prefixes [2]
+I appCompAsp/harm: 240 failures; shortest: ('N/N', 'NP', 'N\\NP') failing prefixes [2]
+I appCompAspAC/crossed: 1632 failures; shortest: ('N', 'N/N', 'N\\N') failing prefixes [2]
+I noTR/crossed: 5133 failures; shortest: ('N', 'N/N', 'N\\N') failing prefixes [2]
+I noTR/harm: 240 failures; shortest: ('N/N', 'NP', 'N\\NP') failing prefixes [2]
+II fullLTR/R/crossed: 64 failures; shortest: ('N', 'N/N', 'N\\N', 'S\\N') failing prefixes [2]
+II fullLTR/orig/crossed: 56 failures; shortest: ('N', 'N/N', 'N\\N', 'S\\N') failing prefixes [2]
+II fullLTRclause/R/crossed: 64 failures; shortest: ('N', 'N/N', 'N\\N', 'S\\N') failing prefixes [2]
+II fullLTRclause/orig/crossed: 56 failures; shortest: ('N', 'N/N', 'N\\N', 'S\\N') failing prefixes [2]
+II fullStrAC/R/crossed: 249 failures; shortest: ('N', 'S/N', 'N\\N') failing prefixes [2]
+II fullStrAC/R/harm: 22 failures; shortest: ('S/N', 'N/NP', 'NP', 'N\\N') failing prefixes [2]
+II fullStrAC/orig/crossed: 233 failures; shortest: ('N', 'S/N', 'N\\N') failing prefixes [2]
+II fullStrAC/orig/harm: 22 failures; shortest: ('S/N', 'N/NP', 'NP', 'N\\N') failing prefixes [2]
+II fullStrACASF/R/crossed: 249 failures; shortest: ('N', 'S/N', 'N\\N') failing prefixes [2]
+II fullStrACASF/R/harm: 22 failures; shortest: ('S/N', 'N/NP', 'NP', 'N\\N') failing prefixes [2]
+II fullStrACASF/orig/crossed: 233 failures; shortest: ('N', 'S/N', 'N\\N') failing prefixes [2]
+II fullStrACASF/orig/harm: 22 failures; shortest: ('S/N', 'N/NP', 'NP', 'N\\N') failing prefixes [2]
+Prop I, no failure at all: ['appAspAC']
+Prop I, no failure among harmonic-derivable sentences: ['appAspAC', 'appCompAspAC']
+Prop II, no failure at all: []
+Prop II, no failure among harmonic-derivable sentences: ['fullLTR/orig', 'fullLTR/R', 'fullLTRclause/orig', 'fullLTRclause/R']

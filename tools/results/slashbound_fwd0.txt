@@ -1,0 +1,13 @@
+kind=fwd k=0 atoms=['S', 'NP', 'N'] lexicon=66 maxlen=3
+  length 2: cumulative failures 0  (1s)
+  length 3: cumulative failures 30789  (106s)
+I appAsp/harm: 45 failures; shortest: ('N', 'N', '(NP\\N)\\N') failing prefixes [2]
+I appAspAC/harm: 45 failures; shortest: ('N', 'N', '(NP\\N)\\N') failing prefixes [2]
+I appCompAsp/harm: 15030 failures; shortest: ('(NP\\N)\\N', '(NP\\N)\\N', '(NP\\NP)\\NP') failing prefixes [2]
+I appCompAspAC/harm: 15030 failures; shortest: ('(NP\\N)\\N', '(NP\\N)\\N', '(NP\\NP)\\NP') failing prefixes [2]
+I noTR/harm: 594 failures; shortest: ('(NP\\N)\\N', 'N', '(NP\\NP)\\N') failing prefixes [2]
+II fullStrACASF/R/crossed: 45 failures; shortest: ('N', 'NP\\(N\\N)', '(S\\N)\\NP') failing prefixes [2]
+Prop I, no failure at all: []
+Prop I, no failure among harmonic-derivable sentences: []
+Prop II, no failure at all: ['fullStrAC/orig', 'fullStrAC/R', 'fullStrACASF/orig', 'fullLTR/orig', 'fullLTR/R', 'fullLTRclause/orig', 'fullLTRclause/R']
+Prop II, no failure among harmonic-derivable sentences: ['fullStrAC/orig', 'fullStrAC/R', 'fullStrACASF/orig', 'fullStrACASF/R', 'fullLTR/orig', 'fullLTR/R', 'fullLTRclause/orig', 'fullLTRclause/R']

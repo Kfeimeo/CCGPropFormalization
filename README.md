@@ -674,3 +674,20 @@ N      (S/NP)/N   N          NP\N      ⇒ S
 没有任何失败落在这三类之外：每个失败都是一个前向函子的参数被整个小句隔到另一端、原始推导只能靠跨前缀边界的 crossed composition 桥接。长度 5 没有出现新的失败类型；长度 4 的 4 个"目标只有 Sq"失败在句类目标集合下仍保持通过。
 
 **结论**：在 (i) TMA、(ii) TR 目标为句类原子集合、(iii) 原始推导不跨前缀边界使用 crossed composition 这三个条件下，长度 ≤ 5 的自然词库上没有反例；所有 105 个有界失败都违反 (iii)，且都是无限制 crossed composition 的过度生成语序。这与第七轮的 Lambek 论证一致：前缀侧规则（AC、GAC、D、GTR、Bⁿ harmonic）都是 L 有效的 residuation 实例，crossed composition 不是。仍需注意：这是有界枚举（范畴节点数 ≤ 15/22、长度 ≤ 5、27 个范畴），不是一般性证明。
+
+# 第九轮：限制单个范畴的 slash 数量
+
+问题：如果限制每个词汇范畴中 slash 的数量（总数，或只限制 `/` 的数量），命题 I / II 是否成立？`tools/slashbound.py` 在各规则系统下做有界枚举（失败用上限 20 复核，并按原始推导是否只需 harmonic composition 分类），结果在 `tools/results/slashbound_*.txt`。
+
+| 上限 | 原子 | 长度 | 命题 I | 命题 II |
+|---|---|---|---|---|
+| slash 总数 ≤ 1 | S, NP, N（21 个范畴） | ≤ 4 | `appAspAC` 无反例；`appCompAspAC` 只有 crossed 反例 `N N/N N\N`；无 AC 的系统 harmonic 即失败 `N/N NP N\NP` | 所有系统都有 crossed 反例 `N S/N N\N`；harmonic 下 `fullStrAC(+ASF)` 失败 `S/N N/NP NP N\N`（GAC 修复），`fullLTR` 无反例 |
+| slash 总数 ≤ 2 | S, NP（74 个范畴） | ≤ 3 | 全部失败（`NP NP (NP\NP)\NP` 即 SOV 形状） | 全部失败；harmonic 失败全部是 `X/(A\B)  Y\B  A\Y` 一种形状（29 个），加镜像 D 后 harmonic 无反例 |
+| 只有 `\`（总数 ≤ 2） | S, NP, N（66 个范畴） | ≤ 3 | 全部失败（SOV 形状） | 所有 STR 系统无反例 |
+| `/` ≤ 1（总数 ≤ 2） | S, NP（58 个范畴） | ≤ 3 | 全部失败 | 与"总数 ≤ 2"相同（反例本身只含一个 `/`） |
+
+命题 I 对含 STR 的系统是 Lean 定理（`prefixReducible_fullStrAC`），与 slash 数量无关，表中只列无 TR 的系统。
+
+**镜像 D**（`ltr_enum.py` 选项 `dbwd`）：`X/(A\B), Y\B ⇒ X/(A\Y)`，即前向函子的后向论元由右侧的 backward composition 完成时的 D；在 Lambek 演算中有效（`Y\B · A\Y ⊢ A\B`）。当前 Lean 中的 `DComb` 只覆盖 `X/(Y|Z), Y/W ⇒ X/(W|Z)`。`tools/harm2_check.py` 复核：加入镜像 D 后，两 slash、长度 3、harmonic 推导下 `fullLTR` 无反例（原为 29 个）。
+
+**结论**：限制 slash 数量不能替代对 crossed composition 的限制。命题 I 在 ≤ 1 slash 且有 AC 时成立（`appAspAC`），但两个 slash（SOV 动词）就失败；命题 II 的 crossed 反例在 1 个 slash、长度 3 时就出现。真正起作用的限制是 slash 的方向模式（纯后向词库下命题 II 无反例）或对 crossed composition 的限制，而不是数量。
