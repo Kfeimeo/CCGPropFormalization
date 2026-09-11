@@ -54,7 +54,7 @@ def check(words):
 
 def main(kind, k, atoms, maxlen, prop1=PROP1, prop2=PROP2):
     CFG['prop1'], CFG['prop2'] = prop1, prop2
-    cats = [c for c in all_cats(atoms, k) if nslash(c, kind) <= k and nslash(c, 'total') <= max(k, 2)]
+    cats = [c for c in all_cats(atoms, max(k, 2)) if nslash(c, kind) <= k]   # total slashes <= max(k,2)
     print(f"kind={kind} k={k} atoms={atoms} lexicon={len(cats)} maxlen={maxlen}", flush=True)
     t0 = time.time(); fails = []
     with Pool() as pool:

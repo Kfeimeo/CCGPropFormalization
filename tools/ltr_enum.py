@@ -91,6 +91,9 @@ def binary(a, b, R):
         inner = a[2]
         if inner[1] == b[1]:
             out.add(fwd(a[1], slash(b[2], inner[0], inner[2])))
+    # D_bwd (mirror of D) : X/(A\\B), Y\\B => X/(A\\Y)   (the argument is completed by backward composition)
+    if R.get('dbwd') and a[0] == '/' and a[2][0] == '\\' and b[0] == '\\' and b[2] == a[2][2]:
+        out.add(fwd(a[1], bwd(a[2][1], b[1])))
     # SA : delete one matching slot anywhere
     if R.get('sa'):
         h, sp = flatten(b)
