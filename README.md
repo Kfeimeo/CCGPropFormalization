@@ -269,6 +269,7 @@ CCGPropFormalization/
   Audit/Product.lean                 -- 第六轮：audit 8，急切归约反例、Bⁿ 必要性、SA ⊊ ASP
   Prediction.lean                    -- 第七轮：D、GAC、GTR、Transparent Modifier Assumption
   Audit/GAC.lean                     -- 第七轮：audit 9，GAC 正面覆盖、根范畴不匹配反例、GTR 修正
+tools/ltr_enum.py, calibrate.py, scan.py   -- 第八轮：有界枚举器、校准、扫描
   Examples.lean                      -- S/NP 例子与实例（含 ASP 的 decide 例子）
 ```
 
@@ -629,3 +630,37 @@ inductive GTR (g) -- X ⇒ g/(g\X)                          （目标 = 分析�
 
 - 加上 GAC 后，在纸面上检查过的结构类里没有找到除"根不匹配"以外的反例。所有前缀侧规则（AC、GAC、D、STR/GTR）都是 Lambek 演算里 `X/P, G ⇒ X/P'`（`G • P' ⊢ P`）这一 residuation 模式的实例，这是将来做一般性完备性证明的出发点；但 CCG 的 crossed composition 不是 L 有效的，若还有反例，最可能出现在跨越前缀边界的交叉依存处。
 - 加入 GTR 后是否完备，仍是未决问题；本轮没有给出一般定理，只给出了机器验证的覆盖与反例。
+
+
+---
+
+# 第八轮：有界枚举器与 GTR 系统扫描
+
+`tools/ltr_enum.py` 把前七轮的全部规则做成可开关选项（FA/BA、harmonic + crossed 广义组合、ASP、AC、GAC、D、SA、ASF、S-/目标/句类集合 TR），用有界 CKY（范畴节点数 ≤ maxsize）计算原始可推导性与 `GrammAcceptable`。正面答案是真实推导；否定答案只是"有界否定"。
+
+**校准**（`tools/calibrate.py`）：前七轮 17 个机器验证过的结论全部复现，包括每个反例失败的前缀位置。
+
+**扫描**（`tools/scan.py`）：27 个自然、TMA 兼容的词汇范畴（无 X/X、X\X），穷举长度 2–4 的全部词串（55 万条），目标 S 与 Sq，原始系统为 FA/BA + Bⁿ（含 crossed），目标系统为 `fullLTRs [S, Sq]` = FA/BA + Bⁿ + ASP + AC + GAC + D + 句类目标 TR。失败用更大上限复核，并标注原始推导是否必须用 crossed composition。
+
+| 设置 | 可推导 (句, 目标) 对 | 失败 | 说明 |
+|---|---|---|---|
+| TR 目标只有分析目标（`fullLTRg goal`） | 202 | 11 | 其中 4 个是"主语在 S 层合并、根为 Sq"，目标只有 Sq 时无法升格 |
+| TR 目标 = 句类原子集合 {S, Sq}（`fullLTRs`） | 202 | 7 | 7 个全部 `NEEDS-CROSSED`：原始推导只有靠 crossed composition 才能得到，且交叉恰好跨越前缀边界 |
+
+7 个残余失败（长度 4）：
+
+```
+S/NP   S/(S\NP)   (S\NP)\S   NP        ⇒ S
+NP/N   NP         (S\NP)\NP  N         ⇒ S      （"the Mary loves man"）
+NP/N   NP         (Sq\NP)\NP N         ⇒ Sq
+NP/N   S/(S\NP)   (S\NP)\NP  N         ⇒ S
+NP/N   Sq/S       S\NP       N         ⇒ Sq
+S/(S/NP) S/(S\NP) (S\NP)\S   S/NP      ⇒ S
+N      (S/NP)/N   N          NP\N      ⇒ S
+```
+
+它们的共同结构：前缀里的一个前向函子（冠词 NP/N、S/NP 等）的参数出现在句子另一端，中间靠 crossed composition 桥接。这些语序在自然语言里不存在（冠词与名词被整个小句隔开），是 CCG 无限制 crossed composition 的过度生成；CCGbank 一类语法正是为此把 crossed composition 限制在特定范畴上。同时它们印证了第七轮的预测：前缀侧规则都是 Lambek residuation 的实例，而 crossed composition 不是 L 有效的，所以剩下的反例只能出现在跨前缀边界的交叉依存处。
+
+**Lean 侧对应**：`Rules.fullLTRs gs`（`GTRs gs`，目标取自句类列表）与 `Rules.fullLTRg_le_fullLTRs`；`lexSOVq_grammAcceptable_clause` 是 SOV 疑问句在 `[S, S_q]` 目标下的可接受性。
+
+**结论**：在 (i) TMA、(ii) TR 目标为句类原子集合、(iii) 原始推导不跨前缀边界使用 crossed composition 这三个条件下，长度 ≤ 4 的自然词库上没有反例。长度 5 的结果见下。

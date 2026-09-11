@@ -61,6 +61,10 @@ inductive GTR (g : Cat Atom) : Cat Atom → Cat Atom → Prop
 theorem STR.gtr {s : Atom} {X Y : Cat Atom} (h : STR s X Y) : GTR (atom s) X Y := by
   cases h; exact GTR.gtr _
 
+/-- Type raising to any of a finite list of clause-type targets: `X ⇒ g/(g\X)` for `g ∈ gs`. -/
+inductive GTRs (gs : List (Cat Atom)) : Cat Atom → Cat Atom → Prop
+  | gtr (g : Cat Atom) (hg : g ∈ gs) (X : Cat Atom) : GTRs gs X (g ⫽ (g ⧵ X))
+
 /-! ### Transparent Modifier Assumption -/
 
 /-- A category of shape `X/X` or `X\X`. -/
@@ -97,6 +101,15 @@ def fullLTR (s : Atom) : Rules Atom :=
 def fullLTRg (g : Cat Atom) : Rules Atom :=
   ⟨fun C D => ASP C D ∨ GTR g C D,
    fun A B C => Combine A B C ∨ AC A B C ∨ DComb A B C ∨ GAC A B C⟩
+
+/-- The same with clause-type targets `gs` (what the enumerator scan uses: `gs = [S, Sq]`). -/
+def fullLTRs (gs : List (Cat Atom)) : Rules Atom :=
+  ⟨fun C D => ASP C D ∨ GTRs gs C D,
+   fun A B C => Combine A B C ∨ AC A B C ∨ DComb A B C ∨ GAC A B C⟩
+
+theorem fullLTRg_le_fullLTRs (g : Cat Atom) (gs : List (Cat Atom)) (hg : g ∈ gs) :
+    fullLTRg g ≤ (fullLTRs gs : Rules Atom) :=
+  ⟨fun _ _ h => h.imp id (fun h => by cases h; exact GTRs.gtr g hg _), fun _ _ _ h => h⟩
 
 /-- Only D and STR (no AC, no ASP, no GAC): enough for the extraction examples. -/
 def dStr (s : Atom) : Rules Atom :=

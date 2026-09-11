@@ -281,6 +281,14 @@ theorem lexSOVq_grammAcceptable_goal :
   · exact ⟨_, ((Derives.lex 0).unary (Or.inr (GTR.gtr NP))).bin (Derives.lex 1) ac,
       Continues.refl.bin (Derives.lex 2) fa⟩
 
+/-- …and with clause-type targets `[S, S']` (the enumerator's setting) via monotonicity. -/
+theorem lexSOVq_grammAcceptable_clause :
+    GrammAcceptable (Rules.fullLTRs [S, S']) (lexSOVq np q s') S' := by
+  intro i hi hin
+  obtain ⟨P, hP, hC⟩ := lexSOVq_grammAcceptable_goal i hi hin
+  have hle := Rules.fullLTRg_le_fullLTRs S' [S, S'] (by simp)
+  exact ⟨P, hP.mono hle, hC.mono hle⟩
+
 end Examples
 
 end CCG
