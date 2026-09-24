@@ -691,3 +691,23 @@ N      (S/NP)/N   N          NP\N      ⇒ S
 **镜像 D**（`ltr_enum.py` 选项 `dbwd`）：`X/(A\B), Y\B ⇒ X/(A\Y)`，即前向函子的后向论元由右侧的 backward composition 完成时的 D；在 Lambek 演算中有效（`Y\B · A\Y ⊢ A\B`）。当前 Lean 中的 `DComb` 只覆盖 `X/(Y|Z), Y/W ⇒ X/(W|Z)`。`tools/harm2_check.py` 复核：加入镜像 D 后，两 slash、长度 3、harmonic 推导下 `fullLTR` 无反例（原为 29 个）。
 
 **结论**：限制 slash 数量不能替代对 crossed composition 的限制。命题 I 在 ≤ 1 slash 且有 AC 时成立（`appAspAC`），但两个 slash（SOV 动词）就失败；命题 II 的 crossed 反例在 1 个 slash、长度 3 时就出现。真正起作用的限制是 slash 的方向模式（纯后向词库下命题 II 无反例）或对 crossed composition 的限制，而不是数量。
+
+# 第十轮：标准 CCG（FA/BA + Bⁿ（harmonic + crossed）+ T）从左到右能否得到命题 I / II
+
+`tools/stdccg.py`。T 取两种标准含义：**T-lex** 是 Steedman 的保序 TR，`X ⇒ T/(T\X)` 仅当 `T\X` 是词汇范畴（镜像同理）；**T-any** 是目标 T 取自 17 个范畴的池子（无限制 TR 的有界近似）。`ltr_enum.py` 新增选项 `tr_lex`。词库为第八轮 27 个范畴加 `(S\NP)\(S\NP)`、`S/S`、`S\S`、`(S\NP)/(S\NP)`、`Sq\NP`。
+
+| 例句 | T-lex 命题 I | T-lex 命题 II | T-any 命题 I | T-any 命题 II |
+|---|---|---|---|---|
+| what John likes | ✗ 前缀 2 | ✗ 2 | ✓ | ✗ 2 |
+| John likes Mary | ✓ | ✓ | ✓ | ✓ |
+| John likes Mary madly | ✓ | ✗ 2 | ✓ | ✗ 2 |
+| SOV `NP NP (S\NP)\NP` | ✓ | ✓ | ✓ | ✓ |
+| what apparently Mary likes | ✗ 2, 3 | ✗ 2, 3 | ✓ | ✗ 2, 3 |
+| `NP NP/N N (S\NP)\NP` | ✗ 2 | ✗ 2 | ✓ | ✓ |
+| 关系从句 the man that John likes sleeps | ✗ 3, 4 | ✗ 2, 3, 4 | ✓ | ✗ 4 |
+
+扫描（T-lex，长度 ≤ 4，92 万条，`tools/results/stdccg_scan4.txt`）：以 S/Sq 为根的句子中命题 I 失败 483 个；命题 II 失败 234 个，其中 39 个原始推导只需 harmonic composition，最短的就是 "what John likes"、"what apparently [S/NP]"、"John likes Mary madly"、`NP NP/N N (S\NP)\NP`。
+
+**结论**：
+- 命题 I：无限制 T 时成立但平凡（第一轮 `prefixReducible_full`，假设未被使用）；T 受词汇许可时为假（"what John likes" 的前缀 `what John` 无范畴）。
+- 命题 II：两种 T 下都为假。"what John likes" 需要把 `(S\NP)/NP` 变成 `(S/NP)\NP`（ASP）；"what apparently Mary likes" 需要 D；"John likes Mary madly" 需要 GAC / head-TR。这三条正是前几轮逐个引入的规则，也对应文献中的 revealing 机制（Pareschi & Steedman 1987；Ambati et al. 2015；Stanojević & Steedman 2019/2020）。

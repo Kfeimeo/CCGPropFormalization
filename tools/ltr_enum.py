@@ -119,6 +119,10 @@ def unary(c, R):
     if R.get('tr_targets'):             # TR with a finite target pool, both directions
         for t in R['tr_targets']:
             out.add(fwd(t, bwd(t, c))); out.add(bwd(t, fwd(t, c)))
+    if R.get('tr_lex'):                 # Steedman's order-preserving TR licensed by the lexicon:
+        for L in R['tr_lex']:           #   X => T/(T\X) if T\X is lexical;  X => T\(T/X) if T/X is lexical
+            if L[0] == '\\' and L[2] == c: out.add(fwd(L[1], L))
+            if L[0] == '/' and L[2] == c: out.add(bwd(L[1], L))
     if R.get('asf'):
         h, sp = flatten(c)
         for k in range(len(sp) - 1):
