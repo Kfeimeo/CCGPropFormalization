@@ -1,0 +1,23 @@
+length 2: differences so far 0
+length 3: differences so far 28
+crossed: LTR-only (LTR unsound): 2
+    (('NP', 'S/(S/NP)', '(S\\NP)/NP'), 'S')
+    (('S/(S\\NP)', 'S/(S/NP)', '(S\\NP)/NP'), 'S')
+crossed: std-only (LTR incomplete): 15
+    (('(S/NP)/N', 'S/(S/NP)', 'N'), 'S')
+    (('(S\\NP)/(S\\NP)', 'NP', 'S\\NP'), 'S')
+    (('(S\\NP)/(S\\NP)', 'S/(S\\NP)', 'S\\NP'), 'S')
+    (('(S\\NP)/NP', 'NP', 'NP'), 'S')
+    (('(S\\NP)/NP', 'S/(S\\NP)', 'NP'), 'S')
+    (('(S\\NP)/PP', 'NP', 'PP'), 'S')
+    (('(S\\NP)/PP', 'S/(S\\NP)', 'PP'), 'S')
+    (('(Sq\\NP)/NP', 'NP', 'NP'), 'Sq')
+harmonic: LTR-only (LTR unsound): 11
+    (('(S/NP)/N', 'NP', 'N'), 'S')
+    (('N', 'S/NP', 'NP\\N'), 'S')
+    (('NP', 'S/(S/NP)', '(S\\NP)/NP'), 'S')
+    (('NP', 'S/(S\\NP)', '(S\\NP)\\NP'), 'S')
+    (('NP', 'S/S', 'S\\NP'), 'S')
+    (('NP', 'Sq/S', 'S\\NP'), 'Sq')
+    (('S/(S\\NP)', 'S/(S/NP)', '(S\\NP)/NP'), 'S')
+    (('S/(S\\NP)', 'S/(S\\NP)', '(S\\NP)\\NP'), 'S')

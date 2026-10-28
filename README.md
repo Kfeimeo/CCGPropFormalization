@@ -711,3 +711,24 @@ N      (S/NP)/N   N          NP\N      ⇒ S
 **结论**：
 - 命题 I：无限制 T 时成立但平凡（第一轮 `prefixReducible_full`，假设未被使用）；T 受词汇许可时为假（"what John likes" 的前缀 `what John` 无范畴）。
 - 命题 II：两种 T 下都为假。"what John likes" 需要把 `(S\NP)/NP` 变成 `(S/NP)\NP`（ASP）；"what apparently Mary likes" 需要 D；"John likes Mary madly" 需要 GAC / head-TR。这三条正是前几轮逐个引入的规则，也对应文献中的 revealing 机制（Pareschi & Steedman 1987；Ambati et al. 2015；Stanojević & Steedman 2019/2020）。
+
+# 第十一轮：命题 III（整句 S 可推导性，不要求从左到右）
+
+**定义**。设参照语法 G = 标准 CCG（FA/BA + Bⁿ + 词汇许可的保序 T），R = 待考察系统。命题 III(G, R) 有两个方向：
+- 完备性：`Derives G w 0 n S → Derives R w 0 n S`；
+- 可靠性：`Derives R w 0 n S → Derives G w 0 n S`。
+
+两者都成立时 R 与 G 定义同一个句子集合，此时命题 II 才真正是"对同一语言的增量推导"。
+
+**平凡部分**。若参照是原始系统 FA/BA + Bⁿ，则"原始系统可推导 ⇒ 标准 CCG 可推导"由 `Derives.mono` 直接成立（`Rules.noTR ≤ Rules.full`）。
+
+**非平凡部分**（`tools/prop3b.py`，R = `fullLTRs [S, Sq]`，词库同第十轮，长度 ≤ 3，`tools/results/prop3_len3.txt`；长度 4 的全量比较超过 30 分钟时限，只做了例句）：
+
+| 变体 | 标准 CCG 有、LTR 没有（不完备） | LTR 有、标准 CCG 没有（不可靠） |
+|---|---|---|
+| 含 crossed B | 15，如 VSO `(S\NP)/NP NP NP`（两个升格 NP 做 >Bx；GTR 只有前向升格） | 2，如 `NP S/(S/NP) (S\NP)/NP`（"John what likes"，ASP + D） |
+| 只有 harmonic B | 0 | 11，如 `NP S/S S\NP`（D 把 S/S 组合进 S\NP，等价于 crossed B）、`N S/NP NP\N` |
+
+十个例句整句都在四个系统中可推导，只有重 NP 移位在 harmonic 标准 CCG 中不可推导（它需要 <Bx），而 harmonic LTR 用 D 推导出来。
+
+**结论**：命题 III 对 LTR 系统两个方向都不成立。不可靠性来自 ASP 与 D：ASP 允许 `(S\NP)/NP ≈ (S/NP)\NP`，D 等价于把修饰语组合进论元，二者合起来接受 "John what likes" 这类错误语序。不完备性只出现在依赖后向 TR 加 crossed B 的推导上（VSO），这类推导本身是标准 CCG 的过度生成（Steedman 对英语限制 >Bx 正是为此）。要让命题 III 成立，需要同时限制两边：参照语法用多模态限制 crossed B，LTR 系统给 ASP/D 加上同样的模态条件。
